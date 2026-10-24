@@ -3,6 +3,7 @@ local ContextActionService = game:GetService("ContextActionService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
+local Debris = game:GetService("Debris")
 local rift = ReplicatedStorage:WaitForChild("Riftbound")
 local request = rift.Remotes.CombatRequest
 local fx = rift.Remotes.CombatFX
@@ -52,10 +53,109 @@ label.TextSize = 13
 label.Text = "RIFTBOUND  |  M1 Attack  •  R Heavy  •  F Parry/Block  •  Q Dash"
 label.Parent = gui
 
-fx.OnClientEvent:Connect(function(effect, character, combo)
+
+-- Phase 1 combat feedback. Visuals are cosmetic and never determine damage.
+local comboLabel = Instance.new("TextLabel")
+comboLabel.Name = "ComboFeedback"
+comboLabel.Size = UDim2.fromOffset(180, 55)
+comboLabel.Position = UDim2.new(0.5, -90, 0.72, 0)
+comboLabel.BackgroundTransparency = 1
+comboLabel.TextColor3 = Color3.fromRGB(255, 226, 120)
+comboLabel.TextStrokeTransparency = 0.3
+comboLabel.Font = Enum.Font.GothamBlack
+comboLabel.TextSize = 30
+comboLabel.TextTransparency = 1
+comboLabel.Parent = gui
+local comboToken = 0
+
+local function showCombo(index)
+	comboToken += 1
+	local token = comboToken
+	comboLabel.Text = index == 5 and "HEAVY!" or (tostring(index) .. " / 4 COMBO")
+	comboLabel.TextTransparency = 0
+	comboLabel.Size = UDim2.fromOffset(205, 62)
+	TweenService:Create(comboLabel, TweenInfo.new(0.18, Enum.EasingStyle.Back), {
+		Size = UDim2.fromOffset(180, 55),
+	}):Play()
+	task.delay(0.75, function()
+		if token == comboToken then
+			TweenService:Create(comboLabel, TweenInfo.new(0.2), {TextTransparency = 1}):Play()
+		end
+	end)
+end
+
+local function floatingText(root, words, color)
+	local billboard = Instance.new("BillboardGui")
+	billboard.Name = "CombatPopup"
+	billboard.Size = UDim2.fromOffset(140, 65)
+	billboard.StudsOffsetWorldSpace = Vector3.new(math.random(-5, 5)/10, 3.2, 0)
+	billboard.AlwaysOnTop = true
+	billboard.Adornee = root
+	billboard.Parent = root
+	local text = Instance.new("TextLabel")
+	text.Size = UDim2.fromScale(1, 1)
+	text.BackgroundTransparency = 1
+	text.Text = words
+	text.TextColor3 = color
+	text.TextStrokeColor3 = Color3.new(0, 0, 0)
+	text.TextStrokeTransparency = 0.25
+	text.Font = Enum.Font.GothamBlack
+	text.TextScaled = true
+	text.Parent = billboard
+	TweenService:Create(billboard, TweenInfo.new(0.55, Enum.EasingStyle.Quad), {
+		StudsOffsetWorldSpace = billboard.StudsOffsetWorldSpace + Vector3.new(0, 1.6, 0),
+	}):Play()
+	TweenService:Create(text, TweenInfo.new(0.5), {
+		TextTransparency = 1,
+		TextStrokeTransparency = 1,
+	}):Play()
+	Debris:AddItem(billboard, 0.6)
+end
+
+local function shockwave(root, color, size)
+	local sphere = Instance.new("Part")
+	sphere.Shape = Enum.PartType.Ball
+	sphere.Anchored = true
+	sphere.CanCollide = false
+	sphere.CanTouch = false
+	sphere.CanQuery = false
+	sphere.Material = Enum.Material.Neon
+	sphere.Color = color
+	sphere.Transparency = 0.45
+	sphere.Size = Vector3.new(0.5, 0.5, 0.5)
+	sphere.CFrame = root.CFrame
+	sphere.Parent = workspace
+	TweenService:Create(sphere, TweenInfo.new(0.25, Enum.EasingStyle.Quad), {
+		Size = Vector3.new(size, size, size),
+		Transparency = 1,
+	}):Play()
+	Debris:AddItem(sphere, 0.3)
+end
+
+fx.OnClientEvent:Connect(function(effect, character, combo, damage)
 	if not character or not character:IsA("Model") then return end
 	local root = character:FindFirstChild("HumanoidRootPart")
 	if not root then return end
+	if effect == "Swing" or effect == "HeavySwing" then
+		if character == Players.LocalPlayer.Character then
+			showCombo(effect == "HeavySwing" and 5 or combo)
+		end
+		return
+	end
+	if effect == "Dash" then
+		shockwave(root, Color3.fromRGB(110, 190, 255), 4)
+		return
+	end
+	if effect == "Hit" and typeof(damage) == "number" then
+		floatingText(root, "-" .. tostring(damage), Color3.fromRGB(255, 115, 115))
+		shockwave(root, Color3.fromRGB(255, 200, 120), combo == 5 and 6 or 3)
+	elseif effect == "BlockedHit" then
+		floatingText(root, "BLOCKED", Color3.fromRGB(125, 190, 255))
+	elseif effect == "Parry" then
+		floatingText(root, "PARRY!", Color3.fromRGB(255, 220, 90))
+	elseif effect == "GuardBreak" then
+		floatingText(root, "GUARD BREAK!", Color3.fromRGB(255, 150, 65))
+	end
 	if effect == "Hit" or effect == "BlockedHit" or effect == "Parry" or effect == "GuardBreak" then
 		local highlight = Instance.new("Highlight")
 		highlight.FillColor = effect == "Hit" and Color3.fromRGB(255,55,55) or (effect == "Parry" and Color3.fromRGB(255,220,70) or (effect == "GuardBreak" and Color3.fromRGB(255,130,30) or Color3.fromRGB(75,150,255)))
