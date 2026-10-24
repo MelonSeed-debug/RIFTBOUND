@@ -158,12 +158,17 @@ end
 
 local function dash(player)
 	local s = getState(player)
-	local character, _, root = alive(player)
-	if not character or s.blocking or s.attacking then return end
+	local character, humanoid, root = alive(player)
+	if not character or s.blocking or s.attacking or os.clock() < s.stunnedUntil then return end
 	local now = os.clock()
 	if now < s.nextDash then return end
 	s.nextDash = now + config.Dash.Cooldown
-	local direction = root.CFrame.LookVector
+	-- Humanoid.MoveDirection is a world-space vector, supporting WASD, thumbstick and touch.
+	local direction = humanoid.MoveDirection
+	if direction.Magnitude < 0.1 then direction = root.CFrame.LookVector end
+	direction = Vector3.new(direction.X,0,direction.Z)
+	if direction.Magnitude < 0.01 then return end
+	direction = direction.Unit
 	local velocity = Instance.new("LinearVelocity")
 	local attachment = Instance.new("Attachment")
 	attachment.Parent = root
