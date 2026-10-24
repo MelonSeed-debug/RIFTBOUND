@@ -1,0 +1,39 @@
+{
+  "name": "RIFTBOUND",
+  "tree": {
+    "$className": "DataModel",
+    "ReplicatedStorage": {
+      "$className": "ReplicatedStorage",
+      "Riftbound": {
+        "$className": "Folder",
+        "Shared": {
+          "$path": "src/shared"
+        },
+        "Remotes": {
+          "$className": "Folder",
+          "CombatRequest": {
+            "$className": "RemoteEvent"
+          },
+          "CombatFX": {
+            "$className": "RemoteEvent"
+          }
+        }
+      }
+    },
+    "ServerScriptService": {
+      "$className": "ServerScriptService",
+      "RiftboundServer": {
+        "$path": "src/server"
+      }
+    },
+    "StarterPlayer": {
+      "$className": "StarterPlayer",
+      "StarterPlayerScripts": {
+        "$className": "StarterPlayerScripts",
+        "RiftboundClient": {
+          "$path": "src/client"
+        }
+      }
+    }
+  }
+}
