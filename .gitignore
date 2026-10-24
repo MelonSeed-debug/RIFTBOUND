@@ -1,0 +1,14 @@
+# OS/editor artifacts
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+
+# Rojo build output (local test exports)
+*.rbxl
+*.rbxlx
+*.rbxm
+*.rbxmx
+
+# Wally / temporary
+*.lock.tmp
