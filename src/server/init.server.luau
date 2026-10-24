@@ -87,7 +87,7 @@ local function m1(player)
 							if combo == 4 and not targetRoot.Anchored then
 								targetRoot.AssemblyLinearVelocity = liveRoot.CFrame.LookVector * config.M1.FinisherKnockback + Vector3.new(0,12,0)
 							end
-							fx:FireAllClients("Hit",model,combo)
+							fx:FireAllClients("Hit",model,combo,config.M1.Damages[combo])
 						end
 					end
 				end
@@ -145,7 +145,7 @@ local function heavy(player)
 							else
 								hum:TakeDamage(config.Heavy.Damage)
 								if not targetRoot.Anchored then targetRoot.AssemblyLinearVelocity=currentRoot.CFrame.LookVector*config.Heavy.Knockback end
-								fx:FireAllClients("Hit",target,5)
+								fx:FireAllClients("Hit",target,5,config.Heavy.Damage)
 							end
 						end
 					end
