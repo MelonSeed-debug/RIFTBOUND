@@ -5,6 +5,17 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local cfg = require(ReplicatedStorage.Riftbound.Shared.AshleySimmonsSpec).Passive
 local fx = ReplicatedStorage.Riftbound.Remotes.SpecFX
 local Passive = {}
+-- Apply passive damage through the same shield calculation as melee damage.
+local shieldModule = script.Parent:FindFirstChild("PillShield")
+local shieldOK, Shield = false, nil
+if shieldModule then shieldOK, Shield = pcall(require, shieldModule) end
+local function applyDamage(target, humanoid, amount)
+	if shieldOK and Shield then
+		Shield.Damage(target, humanoid, amount)
+	else
+		humanoid:TakeDamage(amount)
+	end
+end
 local magazines = {}
 local rng = Random.new()
 local names = {"ChillPill","Euphoria","AdrenalineRush","AntiInflammatory","MoodStabilizer"}
@@ -37,7 +48,7 @@ function Passive.OnHit(player, target)
 	target:SetAttribute(key, expires)
 	-- Never override a longer instance of the same status.
 	fx:FireAllClients("PillImpact", target, name)
-	humanoid:TakeDamage(cfg.Damage)
+	applyDamage(target, humanoid, cfg.Damage)
 	if name == "ChillPill" then
 		local old = humanoid.WalkSpeed
 		humanoid.WalkSpeed = math.max(6, old * (1 - effect.Amount))
