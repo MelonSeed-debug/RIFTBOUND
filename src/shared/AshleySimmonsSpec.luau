@@ -13,6 +13,9 @@ return {
 		Damage = 10,
 		Ammo = 10,
 		AutoReload = true,
+		Trigger = "SuccessfulMeleeHit", -- automatic on unblocked M1/heavy hits; no extra button
+		TriggerCooldown = 0.8, -- provisional balance value
+		ReloadOnEmptyOnly = true,
 		ReloadSeconds = 2.5, -- provisional: original concept did not specify reload time
 		Effects = {
 			ChillPill = {Duration = 1.5, Kind = "Slow", Amount = 0.25}, -- slow percentage provisional
