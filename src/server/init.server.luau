@@ -6,7 +6,19 @@ local Workspace = game:GetService("Workspace")
 
 local rift = ReplicatedStorage:WaitForChild("Riftbound")
 local config = require(rift.Shared.CombatConfig)
-local PillPassive = require(script:WaitForChild("PillPassive"))
+-- Combat remains playable even when optional Spec files fail to sync or load.
+local PillPassive = {Reset = function() end, OnHit = function() end}
+local passiveModule = script:FindFirstChild("PillPassive") or script:WaitForChild("PillPassive", 3)
+if passiveModule and passiveModule:IsA("ModuleScript") then
+	local loaded, result = pcall(require, passiveModule)
+	if loaded and type(result) == "table" then
+		PillPassive = result
+	else
+		warn("[RIFTBOUND] Ashley passive disabled; base combat still active:", result)
+	end
+else
+	warn("[RIFTBOUND] Missing PillPassive module; base combat still active.")
+end
 local request = rift.Remotes.CombatRequest
 local fx = rift.Remotes.CombatFX
 
