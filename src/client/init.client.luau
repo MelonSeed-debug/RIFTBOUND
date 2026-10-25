@@ -7,6 +7,7 @@ local Debris = game:GetService("Debris")
 local rift = ReplicatedStorage:WaitForChild("Riftbound")
 local request = rift.Remotes.CombatRequest
 local fx = rift.Remotes.CombatFX
+local specFX = rift.Remotes.SpecFX
 local Motion = require(script:WaitForChild("CombatAnimations"))
 
 local function attack(_, inputState)
@@ -167,4 +168,46 @@ fx.OnClientEvent:Connect(function(effect, character, combo, damage)
 		TweenService:Create(highlight,TweenInfo.new(0.22),{FillTransparency=1}):Play()
 		game:GetService("Debris"):AddItem(highlight,0.25)
 	end
+end)
+
+
+-- Ashley passive prototype feedback.
+local pillCounter = Instance.new("TextLabel")
+pillCounter.Name = "PillAmmo"
+pillCounter.Size = UDim2.fromOffset(225, 35)
+pillCounter.Position = UDim2.new(0, 15, 1, -100)
+pillCounter.BackgroundColor3 = Color3.fromRGB(35, 22, 54)
+pillCounter.BackgroundTransparency = 0.15
+pillCounter.TextColor3 = Color3.fromRGB(255, 190, 245)
+pillCounter.Font = Enum.Font.GothamBold
+pillCounter.TextSize = 17
+pillCounter.Parent = gui
+
+local player = Players.LocalPlayer
+local function refreshPills()
+	if player:GetAttribute("EquippedSpec") == "AshleySimmons" then
+		pillCounter.Visible = true
+		pillCounter.Text = "Pill Passive  " .. tostring(player:GetAttribute("PillAmmo") or 0) .. "/10"
+	else
+		pillCounter.Visible = false
+	end
+end
+player:GetAttributeChangedSignal("PillAmmo"):Connect(refreshPills)
+player:GetAttributeChangedSignal("EquippedSpec"):Connect(refreshPills)
+refreshPills()
+
+specFX.OnClientEvent:Connect(function(effect, target, status)
+	if effect ~= "PillImpact" or not target or not target:IsA("Model") then return end
+	local root = target:FindFirstChild("HumanoidRootPart")
+	if not root then return end
+	local colors = {
+		ChillPill = Color3.fromRGB(100, 220, 255),
+		Euphoria = Color3.fromRGB(245, 100, 235),
+		AdrenalineRush = Color3.fromRGB(255, 160, 60),
+		AntiInflammatory = Color3.fromRGB(100, 255, 150),
+		MoodStabilizer = Color3.fromRGB(195, 155, 255),
+	}
+	local color = colors[status] or Color3.new(1,1,1)
+	floatingText(root, status, color)
+	shockwave(root, color, 4.5)
 end)
