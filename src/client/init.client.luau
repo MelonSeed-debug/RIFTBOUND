@@ -8,6 +8,7 @@ local rift = ReplicatedStorage:WaitForChild("Riftbound")
 local request = rift.Remotes.CombatRequest
 local fx = rift.Remotes.CombatFX
 local specFX = rift.Remotes:FindFirstChild("SpecFX")
+local specRequest = rift.Remotes:FindFirstChild("SpecRequest")
 -- Optional animation layer must not disable combat inputs.
 local Motion = {Play = function() end}
 local motionModule = script:FindFirstChild("CombatAnimations") or script:WaitForChild("CombatAnimations", 3)
@@ -37,6 +38,14 @@ local function dash(_, inputState)
 	if inputState == Enum.UserInputState.Begin then request:FireServer("Dash") end
 	return Enum.ContextActionResult.Sink
 end
+ContextActionService:BindAction("RiftPillShield", function(_, inputState)
+	if inputState == Enum.UserInputState.Begin and specRequest then
+		specRequest:FireServer("PillShield")
+	end
+	return Enum.ContextActionResult.Sink
+end, true, Enum.KeyCode.Z, Enum.KeyCode.DPadUp)
+ContextActionService:SetTitle("RiftPillShield", "Shield")
+ContextActionService:SetPosition("RiftPillShield", UDim2.new(1,-300,1,-135))
 ContextActionService:BindAction("RiftAttack",attack,true,Enum.UserInputType.MouseButton1,Enum.KeyCode.ButtonR2)
 ContextActionService:BindAction("RiftHeavy",heavy,true,Enum.KeyCode.R,Enum.KeyCode.ButtonX)
 ContextActionService:BindAction("RiftBlock",block,true,Enum.KeyCode.F,Enum.KeyCode.ButtonL2)
@@ -194,6 +203,46 @@ pillCounter.TextSize = 17
 pillCounter.Parent = gui
 
 local player = Players.LocalPlayer
+local shieldLabel = Instance.new("TextLabel")
+shieldLabel.Name = "PillShieldIndicator"
+shieldLabel.Size = UDim2.fromOffset(245, 32)
+shieldLabel.Position = UDim2.new(0, 15, 1, -138)
+shieldLabel.BackgroundColor3 = Color3.fromRGB(38, 40, 90)
+shieldLabel.BackgroundTransparency = 0.12
+shieldLabel.TextColor3 = Color3.fromRGB(135, 235, 255)
+shieldLabel.Font = Enum.Font.GothamBold
+shieldLabel.TextSize = 16
+shieldLabel.Parent = gui
+
+local shieldConnection
+local function updateShield()
+	local character = player.Character
+	local hp = character and character:GetAttribute("PillShieldHP") or 0
+	local ready = player:GetAttribute("PillShieldReadyAt") or 0
+	local remaining = math.max(0, math.ceil(ready - workspace:GetServerTimeNow()))
+	shieldLabel.Visible = player:GetAttribute("EquippedSpec") == "AshleySimmons"
+	if hp > 0 then
+		shieldLabel.Text = "Z  PILL SHIELD: " .. math.ceil(hp) .. " HP"
+	elseif remaining > 0 then
+		shieldLabel.Text = "Z  SHIELD COOLDOWN: " .. remaining .. "s"
+	else
+		shieldLabel.Text = "Z  PILL SHIELD READY"
+	end
+end
+local function watchCharacter(character)
+	if shieldConnection then shieldConnection:Disconnect() end
+	shieldConnection = character:GetAttributeChangedSignal("PillShieldHP"):Connect(updateShield)
+	updateShield()
+end
+player.CharacterAdded:Connect(watchCharacter)
+if player.Character then watchCharacter(player.Character) end
+player:GetAttributeChangedSignal("PillShieldReadyAt"):Connect(updateShield)
+task.spawn(function()
+	while gui.Parent do
+		updateShield()
+		task.wait(0.2)
+	end
+end)
 local function refreshPills()
 	if player:GetAttribute("EquippedSpec") == "AshleySimmons" then
 		pillCounter.Visible = true
