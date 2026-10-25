@@ -19,6 +19,19 @@ if passiveModule and passiveModule:IsA("ModuleScript") then
 else
 	warn("[RIFTBOUND] Missing PillPassive module; base combat still active.")
 end
+local Shield = {Activate = function() return false end, Damage = function(_, hum, n) hum:TakeDamage(n) end, Clear = function() end, ResetPlayer = function() end}
+local shieldModule = script:FindFirstChild("PillShield") or script:WaitForChild("PillShield", 3)
+if shieldModule then
+	local ok, loaded = pcall(require, shieldModule)
+	if ok and type(loaded) == "table" then Shield = loaded
+	else warn("[RIFTBOUND] Pill Shield unavailable:", loaded) end
+end
+local specRequest = rift.Remotes:FindFirstChild("SpecRequest")
+if specRequest then
+	specRequest.OnServerEvent:Connect(function(player, action)
+		if action == "PillShield" then Shield.Activate(player) end
+	end)
+end
 local request = rift.Remotes.CombatRequest
 local fx = rift.Remotes.CombatFX
 
@@ -96,7 +109,7 @@ local function m1(player)
 								fx:FireAllClients("BlockedHit",model,combo)
 							end
 						else
-							targetHum:TakeDamage(config.M1.Damages[combo])
+							Shield.Damage(model, targetHum, config.M1.Damages[combo])
 							PillPassive.OnHit(player, model)
 							if combo == 4 and not targetRoot.Anchored then
 								targetRoot.AssemblyLinearVelocity = liveRoot.CFrame.LookVector * config.M1.FinisherKnockback + Vector3.new(0,12,0)
@@ -157,7 +170,7 @@ local function heavy(player)
 								target:SetAttribute("RiftBlocking",false)
 								fx:FireAllClients("GuardBreak",target)
 							else
-								hum:TakeDamage(config.Heavy.Damage)
+								Shield.Damage(target, hum, config.Heavy.Damage)
 								PillPassive.OnHit(player, target)
 								if not targetRoot.Anchored then targetRoot.AssemblyLinearVelocity=currentRoot.CFrame.LookVector*config.Heavy.Knockback end
 								fx:FireAllClients("Hit",target,5,config.Heavy.Damage)
@@ -211,12 +224,14 @@ local function setup(player)
 	-- Draft testing: give Ashley to testers in Studio until Spec selection is implemented.
 	if game:GetService("RunService"):IsStudio() then player:SetAttribute("EquippedSpec", "AshleySimmons") end
 	PillPassive.Reset(player)
+	Shield.ResetPlayer(player)
 	player.CharacterAdded:Connect(function(character)
 		local s = getState(player)
 		s.combo,s.lastHit,s.nextM1,s.nextDash = 0,0,0,0
 		s.blocking,s.attacking = false,false
 		s.nextHeavy,s.stunnedUntil,s.parryUntil,s.nextParry = 0,0,0,0
 		character:SetAttribute("RiftBlocking",false)
+		Shield.Clear(character)
 		PillPassive.Reset(player)
 	end)
 	if player.Character then player.Character:SetAttribute("RiftBlocking",false) end
