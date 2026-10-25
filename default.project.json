@@ -16,6 +16,12 @@
           },
           "CombatFX": {
             "$className": "RemoteEvent"
+          },
+          "SpecRequest": {
+            "$className": "RemoteEvent"
+          },
+          "SpecFX": {
+            "$className": "RemoteEvent"
           }
         }
       }
