@@ -7,6 +7,7 @@ local Debris = game:GetService("Debris")
 local rift = ReplicatedStorage:WaitForChild("Riftbound")
 local request = rift.Remotes.CombatRequest
 local fx = rift.Remotes.CombatFX
+local Motion = require(script:WaitForChild("CombatAnimations"))
 
 local function attack(_, inputState)
 	if inputState == Enum.UserInputState.Begin then request:FireServer("M1") end
@@ -136,6 +137,7 @@ fx.OnClientEvent:Connect(function(effect, character, combo, damage)
 	if not character or not character:IsA("Model") then return end
 	local root = character:FindFirstChild("HumanoidRootPart")
 	if not root then return end
+	Motion.Play(character, effect, combo)
 	if effect == "Swing" or effect == "HeavySwing" then
 		if character == Players.LocalPlayer.Character then
 			showCombo(effect == "HeavySwing" and 5 or combo)
