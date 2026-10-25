@@ -7,8 +7,18 @@ local Debris = game:GetService("Debris")
 local rift = ReplicatedStorage:WaitForChild("Riftbound")
 local request = rift.Remotes.CombatRequest
 local fx = rift.Remotes.CombatFX
-local specFX = rift.Remotes.SpecFX
-local Motion = require(script:WaitForChild("CombatAnimations"))
+local specFX = rift.Remotes:FindFirstChild("SpecFX")
+-- Optional animation layer must not disable combat inputs.
+local Motion = {Play = function() end}
+local motionModule = script:FindFirstChild("CombatAnimations") or script:WaitForChild("CombatAnimations", 3)
+if motionModule and motionModule:IsA("ModuleScript") then
+	local ok, loaded = pcall(require, motionModule)
+	if ok and type(loaded) == "table" then
+		Motion = loaded
+	else
+		warn("[RIFTBOUND] Animation controller unavailable:", loaded)
+	end
+end
 
 local function attack(_, inputState)
 	if inputState == Enum.UserInputState.Begin then request:FireServer("M1") end
@@ -196,6 +206,7 @@ player:GetAttributeChangedSignal("PillAmmo"):Connect(refreshPills)
 player:GetAttributeChangedSignal("EquippedSpec"):Connect(refreshPills)
 refreshPills()
 
+if specFX then
 specFX.OnClientEvent:Connect(function(effect, target, status)
 	if effect ~= "PillImpact" or not target or not target:IsA("Model") then return end
 	local root = target:FindFirstChild("HumanoidRootPart")
@@ -211,3 +222,5 @@ specFX.OnClientEvent:Connect(function(effect, target, status)
 	floatingText(root, status, color)
 	shockwave(root, color, 4.5)
 end)
+
+end
