@@ -46,6 +46,14 @@ ContextActionService:BindAction("RiftPillShield", function(_, inputState)
 end, true, Enum.KeyCode.Z, Enum.KeyCode.DPadUp)
 ContextActionService:SetTitle("RiftPillShield", "Shield")
 ContextActionService:SetPosition("RiftPillShield", UDim2.new(1,-300,1,-135))
+ContextActionService:BindAction("RiftBuzzBoost", function(_, inputState)
+	if inputState == Enum.UserInputState.Begin and specRequest then
+		specRequest:FireServer("BuzzBoost")
+	end
+	return Enum.ContextActionResult.Sink
+end, true, Enum.KeyCode.X, Enum.KeyCode.DPadLeft)
+ContextActionService:SetTitle("RiftBuzzBoost", "Buzz")
+ContextActionService:SetPosition("RiftBuzzBoost", UDim2.new(1,-310,1,-220))
 ContextActionService:BindAction("RiftAttack",attack,true,Enum.UserInputType.MouseButton1,Enum.KeyCode.ButtonR2)
 ContextActionService:BindAction("RiftHeavy",heavy,true,Enum.KeyCode.R,Enum.KeyCode.ButtonX)
 ContextActionService:BindAction("RiftBlock",block,true,Enum.KeyCode.F,Enum.KeyCode.ButtonL2)
@@ -214,6 +222,32 @@ shieldLabel.Font = Enum.Font.GothamBold
 shieldLabel.TextSize = 16
 shieldLabel.Parent = gui
 
+local buzzLabel = Instance.new("TextLabel")
+buzzLabel.Name = "BuzzBoostIndicator"
+buzzLabel.Size = UDim2.fromOffset(245, 32)
+buzzLabel.Position = UDim2.new(0, 15, 1, -176)
+buzzLabel.BackgroundColor3 = Color3.fromRGB(60, 40, 20)
+buzzLabel.BackgroundTransparency = 0.12
+buzzLabel.TextColor3 = Color3.fromRGB(255, 215, 105)
+buzzLabel.Font = Enum.Font.GothamBold
+buzzLabel.TextSize = 16
+buzzLabel.Parent = gui
+
+local function updateBuzz()
+	local character = player.Character
+	local now = workspace:GetServerTimeNow()
+	local activeEnds = character and character:GetAttribute("BuzzBoostEnds") or 0
+	local ready = player:GetAttribute("BuzzBoostReadyAt") or 0
+	buzzLabel.Visible = player:GetAttribute("EquippedSpec") == "AshleySimmons"
+	if activeEnds > now then
+		buzzLabel.Text = "X  BUZZ BOOST: " .. math.ceil(activeEnds-now) .. "s"
+	elseif ready > now then
+		buzzLabel.Text = "X  BUZZ COOLDOWN: " .. math.ceil(ready-now) .. "s"
+	else
+		buzzLabel.Text = "X  BUZZ BOOST READY"
+	end
+end
+
 local shieldConnection
 local function updateShield()
 	local character = player.Character
@@ -232,14 +266,17 @@ end
 local function watchCharacter(character)
 	if shieldConnection then shieldConnection:Disconnect() end
 	shieldConnection = character:GetAttributeChangedSignal("PillShieldHP"):Connect(updateShield)
+	updateBuzz()
 	updateShield()
 end
 player.CharacterAdded:Connect(watchCharacter)
 if player.Character then watchCharacter(player.Character) end
 player:GetAttributeChangedSignal("PillShieldReadyAt"):Connect(updateShield)
+player:GetAttributeChangedSignal("BuzzBoostReadyAt"):Connect(updateBuzz)
 task.spawn(function()
 	while gui.Parent do
 		updateShield()
+		updateBuzz()
 		task.wait(0.2)
 	end
 end)
