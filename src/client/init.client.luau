@@ -112,6 +112,18 @@ if hudModule and hudModule:IsA("ModuleScript") then
 	end
 end
 
+-- Quest journal is optional: broken UI never disables attacks or Spec selection.
+local boardModule = script:FindFirstChild("QuestBoard") or script:WaitForChild("QuestBoard", 3)
+if boardModule and boardModule:IsA("ModuleScript") then
+	local ok, board = pcall(require, boardModule)
+	if ok and type(board) == "table" and type(board.Init) == "function" then
+		local built, err = pcall(board.Init, Players.LocalPlayer, gui)
+		if not built then warn("[RIFTBOUND] Quest Board could not initialize:", err) end
+	else
+		warn("[RIFTBOUND] Quest Board missing or failed to load:", board)
+	end
+end
+
 -- The Spec menu is an optional UI module: combat input still loads without it.
 local specMenuModule = script:FindFirstChild("SpecMenu") or script:WaitForChild("SpecMenu", 3)
 if specMenuModule and specRequest then
