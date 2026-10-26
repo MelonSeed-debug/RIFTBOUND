@@ -14,6 +14,7 @@ LevelConfig.Rewards = {
 	["Rift Sentinel"] = {XP = 310, Coins = 90},
 	["Rift Stalker"] = {XP = 450, Coins = 130},
 	["Void Ravager"] = {XP = 740, Coins = 215},
+	["Abyss Warden"] = {XP = 1600, Coins = 520},
 }
 
 function LevelConfig.XPToNext(level)
