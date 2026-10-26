@@ -10,6 +10,15 @@
 return {
 	PreviewFolder = "RIFTBOUND Animation Clips",
 	StudioPreview = true,
+	-- Measured from the uploaded pack's "Hit" animation markers.
+	-- Speeds align visual impact with existing SERVER hitbox timing:
+	-- 0.12 s for M1, 0.36 s for Heavy, ~0.17 s for a dash.
+	PlaybackSpeeds = {
+		M1_1 = 3.61, M1_2 = 1.67, M1_3 = 1.67, M1_4 = 1.25,
+		Heavy = 2.92,
+		Dash = 4.0, DashLeft = 4.3, DashRight = 4.3, DashBack = 3.43,
+		Parry = 1.5,
+	},
 	Moves = {
 		M1_1 = "",
 		M1_2 = "",
