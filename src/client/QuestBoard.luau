@@ -2,7 +2,7 @@
 -- RIFTBOUND quest journal: J key or QUESTS button.
 -- UI reflects server attributes; it never awards XP, currency or quest permits.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local UserInputService = game:GetService("UserInputService")
+local ContextActionService = game:GetService("ContextActionService")
 local Quests = require(ReplicatedStorage.Riftbound.Shared.QuestConfig)
 
 local QuestBoard = {}
@@ -53,9 +53,18 @@ end
 
 function QuestBoard.Init(player, gui)
 	local remotes = ReplicatedStorage.Riftbound.Remotes
-	local request = remotes:WaitForChild("QuestRequest", 5)
-	local feedback = remotes:WaitForChild("QuestFX", 5)
-	if not request then return end
+	-- Render the journal even when remotes have not synced yet.
+	-- Buttons resolve QuestRequest at click time; a missing event gets an
+	-- actionable status instead of hiding the whole journal and J binding.
+	local function sendRequest(action, questId)
+		local remote = remotes:FindFirstChild("QuestRequest")
+		if not remote or not remote:IsA("RemoteEvent") then
+			warn("[RIFTBOUND Quests] QuestRequest missing in ReplicatedStorage.Riftbound.Remotes. Re-sync default.project.json and restart Rojo.")
+			return false
+		end
+		remote:FireServer(action, questId)
+		return true
+	end
 
 	local toggle = button(gui, "QUESTS [J]", UDim2.fromOffset(142, 39), UDim2.new(1, -155, 0, 64), colors.card)
 	toggle.Name = "OpenQuestLog"
@@ -94,6 +103,7 @@ function QuestBoard.Init(player, gui)
 	scroll.ScrollingDirection = Enum.ScrollingDirection.Y
 	scroll.Parent = panel
 
+	local message
 	local cards = {}
 	for index, id in Quests.Order do
 		local q = Quests.Quests[id]
@@ -116,15 +126,18 @@ function QuestBoard.Init(player, gui)
 			local active = player:GetAttribute("QuestActiveId") or ""
 			if active == id then
 				local count = player:GetAttribute("QuestCount") or 0
-				if count >= q.Count then request:FireServer("Claim")
-				else request:FireServer("Abandon") end
+				if count >= q.Count then
+					if not sendRequest("Claim") then message.Text = "QUEST OFFLINE: sync default.project.json" end
+				else
+					if not sendRequest("Abandon") then message.Text = "QUEST OFFLINE: sync default.project.json" end
+				end
 			elseif active == "" then
-				request:FireServer("Accept", id)
+				if not sendRequest("Accept", id) then message.Text = "QUEST OFFLINE: sync default.project.json" end
 			end
 		end)
 	end
 
-	local message = text(panel, "Complete quests for XP and Rift Coins.", UDim2.new(1,-32,0,33),
+	message = text(panel, "Complete quests for XP and Rift Coins.", UDim2.new(1,-32,0,33),
 		UDim2.new(0,16,1,-43), 13, colors.muted, false)
 
 	local tracker = button(gui, "NO ACTIVE QUEST  |  [J]", UDim2.fromOffset(225, 48),
@@ -182,22 +195,36 @@ function QuestBoard.Init(player, gui)
 		player:GetAttributeChangedSignal(attribute):Connect(refresh)
 	end
 	refresh()
-	if feedback then
-		feedback.OnClientEvent:Connect(function(success, words)
+	local feedbackConnected = false
+	local function connectFeedback(remote)
+		if feedbackConnected or not remote or not remote:IsA("RemoteEvent") then return end
+		feedbackConnected = true
+		remote.OnClientEvent:Connect(function(success, words)
 			message.Text = tostring(words)
 			message.TextColor3 = success and Color3.fromRGB(136, 241, 194) or Color3.fromRGB(255, 154, 150)
 			refresh()
 		end)
 	end
+	connectFeedback(remotes:FindFirstChild("QuestFX"))
+	remotes.ChildAdded:Connect(function(child)
+		if child.Name == "QuestFX" then connectFeedback(child) end
+	end)
+	if not remotes:FindFirstChild("QuestRequest") then
+		message.Text = "Quest service connecting... Check Rojo sync."
+		warn("[RIFTBOUND Quests] Quest journal loaded, but QuestRequest is missing. Verify default.project.json and Rojo.")
+	end
 	toggle.Activated:Connect(function()
 		panel.Visible = not panel.Visible
 		refresh()
 	end)
-	UserInputService.InputBegan:Connect(function(input, handled)
-		if handled or input.KeyCode ~= Enum.KeyCode.J then return end
-		panel.Visible = not panel.Visible
-		refresh()
-	end)
+	ContextActionService:BindAction("RiftQuestJournal", function(_, inputState)
+		if inputState == Enum.UserInputState.Begin then
+			panel.Visible = not panel.Visible
+			refresh()
+		end
+		return Enum.ContextActionResult.Pass
+	end, false, Enum.KeyCode.J, Enum.KeyCode.ButtonSelect)
+	print("[RIFTBOUND Quests] Quest journal initialized. Press J to open.")
 end
 
 return QuestBoard
