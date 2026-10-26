@@ -6,6 +6,36 @@ local TweenService = game:GetService("TweenService")
 local Debris = game:GetService("Debris")
 local Lighting = game:GetService("Lighting")
 local RunService = game:GetService("RunService")
+
+-- If Rojo accidentally syncs an empty/mismatched project, the first
+-- WaitForChild below can yield indefinitely. Show a useful recovery banner
+-- rather than presenting an apparently empty Roblox place with no clues.
+local clientUIReady = false
+local diagnosticGui
+task.delay(8, function()
+	if clientUIReady then return end
+	local player = Players.LocalPlayer
+	local playerGui = player and player:FindFirstChildOfClass("PlayerGui")
+	if not playerGui or clientUIReady then return end
+	diagnosticGui = Instance.new("ScreenGui")
+	diagnosticGui.Name = "RIFTBOUND Startup Diagnostic"
+	diagnosticGui.ResetOnSpawn = false
+	diagnosticGui.DisplayOrder = 150
+	diagnosticGui.Parent = playerGui
+	local warning = Instance.new("TextLabel")
+	warning.Name = "RojoSyncWarning"
+	warning.AnchorPoint = Vector2.new(0.5, 0)
+	warning.Position = UDim2.new(0.5, 0, 0, 18)
+	warning.Size = UDim2.new(0.9, 0, 0, 78)
+	warning.BackgroundColor3 = Color3.fromRGB(41, 17, 22)
+	warning.TextColor3 = Color3.fromRGB(255, 239, 207)
+	warning.TextScaled = false
+	warning.TextSize = 17
+	warning.TextWrapped = true
+	warning.Font = Enum.Font.GothamBold
+	warning.Text = "RIFTBOUND CLIENT NOT READY\\nCheck Rojo connection and ReplicatedStorage > Riftbound. Open View > Output for errors."
+	warning.Parent = diagnosticGui
+end)
 local rift = ReplicatedStorage:WaitForChild("Riftbound")
 local request = rift.Remotes.CombatRequest
 local fx = rift.Remotes.CombatFX
@@ -215,6 +245,46 @@ end
 -- All large windows are mutually exclusive and panels adjust for the viewport.
 loadOptionalUI("UIManager")
 loadOptionalUI("MainMenuUI")
+
+-- UI is operational even when the animation pack is absent.
+clientUIReady = gui:FindFirstChild("MainMenuToggle") ~= nil
+	and gui:FindFirstChild("ProgressionHUD") ~= nil
+	and gui:FindFirstChild("ArtDecoVitals") ~= nil
+if clientUIReady then
+	if diagnosticGui then diagnosticGui:Destroy() diagnosticGui=nil end
+	print("[RIFTBOUND UI] Core HUD, status bars and central menu loaded.")
+else
+	warn("[RIFTBOUND UI] At least one core panel missing. Check Rojo modules and Output.")
+end
+
+-- Explain missing animation imports separately from UI, so a corrupted model
+-- cannot look like a failure of the whole game.
+task.delay(5, function()
+	if not gui or not gui.Parent then return end
+	if not Motion.GetStatus then return end
+	local ok, status = pcall(Motion.GetStatus)
+	if not ok or typeof(status) ~= "string" then return end
+	print("[RIFTBOUND Animations]", status)
+	if status:find("No animation clips", 1, true) then
+		local hint = Instance.new("TextLabel")
+		hint.Name = "AnimationImportHint"
+		hint.AnchorPoint = Vector2.new(0.5, 0)
+		hint.Position = UDim2.new(0.5, 0, 0, 62)
+		hint.Size = UDim2.fromOffset(465, 51)
+		hint.BackgroundColor3 = Color3.fromRGB(34, 25, 31)
+		hint.BackgroundTransparency = 0.12
+		hint.BorderSizePixel = 0
+		hint.TextColor3 = Color3.fromRGB(255, 226, 172)
+		hint.TextSize = 13
+		hint.TextWrapped = true
+		hint.Font = Enum.Font.GothamBold
+		hint.Text = "Animations not imported. Insert your .rbxm model under ReplicatedStorage in Edit mode. HUD/combat still work."
+		hint.Parent = gui
+		task.delay(11,function()
+			if hint.Parent then hint:Destroy() end
+		end)
+	end
+end)
 
 -- Phase 1 combat feedback. Visuals are cosmetic and never determine damage.
 local comboLabel = Instance.new("TextLabel")
