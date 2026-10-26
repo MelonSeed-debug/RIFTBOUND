@@ -70,6 +70,22 @@ if selectionModule and selectionModule:IsA("ModuleScript") then
 else
 	warn("[RIFTBOUND] Missing SpecSelection; base combat is still available.")
 end
+-- Quests are isolated from the combat startup path. Missing quest files
+-- cannot disable existing Specs, NPCs or the training dummy.
+task.defer(function()
+	local questModule = script:FindFirstChild("QuestService") or script:WaitForChild("QuestService", 4)
+	if not questModule or not questModule:IsA("ModuleScript") then
+		warn("[RIFTBOUND] QuestService not found; combat remains available.")
+		return
+	end
+	local ok, service = pcall(require, questModule)
+	if not ok or type(service) ~= "table" or type(service.Start) ~= "function" then
+		warn("[RIFTBOUND] Quest service failed to load:", service)
+		return
+	end
+	local started, err = pcall(service.Start)
+	if not started then warn("[RIFTBOUND] Quest service failed to start:", err) end
+end)
 local specRequest = rift.Remotes:WaitForChild("SpecRequest", 5)
 if specRequest then
 	specRequest.OnServerEvent:Connect(function(player, action, requestedId)
