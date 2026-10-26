@@ -185,11 +185,17 @@ function InventoryUI.Init(player,gui)
 	-- Opening from MENU [M] must render too, not just the I-key toggle.
 	panel:GetPropertyChangedSignal("Visible"):Connect(function()
 		if panel.Visible then
-			currentMode="Inventory"
+			-- Opening the menu starts on Inventory, but opening a real
+			-- merchant should keep its selected Buy tab.
+			if panel:GetAttribute("OpenFromMainMenu")==true then
+				currentMode="Inventory"
+				panel:SetAttribute("OpenFromMainMenu",nil)
+			end
 			render()
 		end
 	end)
 	local function toggle()
+		if not panel.Visible then currentMode="Inventory" end
 		panel.Visible=not panel.Visible
 	end
 	open.Activated:Connect(toggle)
