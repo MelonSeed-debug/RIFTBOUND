@@ -44,7 +44,7 @@ local CombatConfig = {
 
 	NPC = {
 		Enabled = true,
-		StudioOnly = true, -- Keep hostile NPCs in local test sessions until map/spawns are finalized.
+		StudioOnly = false, -- Real world encounters now spawn in the published world too.
 		DetectRange = 40,
 		LeashRange = 58,
 		AttackRange = 5.6,
