@@ -25,6 +25,12 @@
           },
           "ProgressionFX": {
             "$className": "RemoteEvent"
+          },
+          "QuestRequest": {
+            "$className": "RemoteEvent"
+          },
+          "QuestFX": {
+            "$className": "RemoteEvent"
           }
         }
       }
