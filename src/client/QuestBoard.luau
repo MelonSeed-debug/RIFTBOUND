@@ -4,15 +4,16 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ContextActionService = game:GetService("ContextActionService")
 local Quests = require(ReplicatedStorage.Riftbound.Shared.QuestConfig)
+local Deco = require(script.Parent.ArtDecoUI)
 
 local QuestBoard = {}
 local colors = {
-	bg = Color3.fromRGB(18, 19, 36),
-	card = Color3.fromRGB(33, 31, 55),
-	accent = Color3.fromRGB(153, 117, 250),
-	text = Color3.fromRGB(250, 246, 255),
-	muted = Color3.fromRGB(188, 181, 206),
-	gold = Color3.fromRGB(255, 223, 126),
+	bg = Deco.Ink,
+	card = Deco.Slate,
+	accent = Deco.Gold,
+	text = Deco.Paper,
+	muted = Deco.Muted,
+	gold = Deco.PaleGold,
 }
 
 local function corner(parent, radius)
@@ -46,8 +47,9 @@ local function button(parent, words, size, pos, color)
 	b.TextColor3 = colors.text
 	b.BackgroundColor3 = color
 	b.BorderSizePixel = 0
-	corner(b, 8)
+	corner(b, 5)
 	b.Parent = parent
+	Deco.Button(b)
 	return b
 end
 
@@ -77,15 +79,14 @@ function QuestBoard.Init(player, gui)
 	panel.BorderSizePixel = 0
 	panel.Visible = false
 	panel.Parent = gui
-	corner(panel, 12)
+	corner(panel, 7)
+	Deco.Panel(panel)
 	local sizing = Instance.new("UISizeConstraint")
 	sizing.MaxSize = Vector2.new(430, 470)
 	sizing.MinSize = Vector2.new(300, 470)
 	sizing.Parent = panel
-	local edge = Instance.new("UIStroke")
-	edge.Thickness = 2
-	edge.Color = colors.accent
-	edge.Parent = panel
+	local edge = panel:FindFirstChild("RiftDecoBorder")
+	if edge then edge.Thickness = 2 end
 
 	text(panel, "RIFTBOUND / QUESTS", UDim2.new(1, -74, 0, 34), UDim2.fromOffset(16, 10), 21, colors.text, true)
 	local close = button(panel, "X", UDim2.fromOffset(34, 32), UDim2.new(1,-47,0,10), colors.card)
@@ -114,7 +115,8 @@ function QuestBoard.Init(player, gui)
 		card.BackgroundColor3 = colors.card
 		card.BorderSizePixel = 0
 		card.Parent = scroll
-		corner(card, 9)
+		corner(card, 4)
+		Deco.Panel(card)
 		local name = text(card, q.Name, UDim2.new(1, -125, 0, 22), UDim2.fromOffset(10, 6), 16, colors.text, true)
 		local description = text(card, q.Description, UDim2.new(1, -20, 0, 30), UDim2.fromOffset(10, 28), 12, colors.muted, false)
 		local rewardLine = text(card, "Lv " .. q.RequiredLevel .. "  |  +" .. q.XP .. " XP  +" .. q.Coins .. " coins",
@@ -168,6 +170,8 @@ function QuestBoard.Init(player, gui)
 		for id, row in cards do
 			local done = player:GetAttribute("QuestCompleted_" .. id) == true
 			local q = row.quest
+			local priorOK = not q.PrerequisiteQuest
+				or player:GetAttribute("QuestCompleted_" .. q.PrerequisiteQuest) == true
 			if not loaded then
 				row.button.Text = "LOADING"
 			elseif done and not q.Repeatable then
@@ -176,27 +180,32 @@ function QuestBoard.Init(player, gui)
 				row.button.Text = count >= q.Count and "CLAIM" or "ABANDON"
 			elseif active ~= "" then
 				row.button.Text = "BUSY"
-			elseif level < q.RequiredLevel or (q.RequiredPermit and not hasPermit) then
+			elseif level < q.RequiredLevel or (q.RequiredPermit and not hasPermit) or not priorOK then
 				row.button.Text = "LOCKED"
 			else
 				row.button.Text = "ACCEPT"
 			end
 			row.button.Active = loaded and (id == active or
 				(active == "" and level >= q.RequiredLevel
-					and (not q.RequiredPermit or hasPermit)
+					and (not q.RequiredPermit or hasPermit) and priorOK
 					and (not done or q.Repeatable)))
 			row.button.BackgroundColor3 = row.button.Active and colors.accent or Color3.fromRGB(84, 79, 109)
 			row.note.Text = (done and not q.Repeatable) and "COMPLETE" or
 				(level < q.RequiredLevel and ("Requires Lv " .. q.RequiredLevel) or
 				(q.RequiredPermit and not hasPermit and "RIFT PERMIT REQUIRED" or
-				(q.Repeatable and "REPEATABLE" or "ONE TIME")))
+				(not priorOK and "STORY CHAPTER LOCKED" or
+				(q.Category == "Story" and "STORY CHAPTER" or
+				(q.Repeatable and "REPEATABLE" or "ONE TIME")))))
 		end
 	end
 
 	for _, attribute in {"Level", "ProgressLoaded", "QuestActiveId", "QuestCount",
 		"QuestCompleted_FirstSteps", "QuestCompleted_ShieldWall",
 		"QuestCompleted_StreetPatrol", "QuestCompleted_RiftInitiation",
-		"QuestCompleted_VoidTrial", "QuestPermit_RiftInitiate"} do
+		"QuestCompleted_VoidTrial", "QuestPermit_RiftInitiate",
+		"QuestCompleted_FirstSpark", "QuestCompleted_MarketWhispers",
+		"QuestCompleted_FoundrySecret", "QuestCompleted_VeilVoices",
+		"QuestCompleted_AbyssHeart"} do
 		player:GetAttributeChangedSignal(attribute):Connect(refresh)
 	end
 	refresh()
