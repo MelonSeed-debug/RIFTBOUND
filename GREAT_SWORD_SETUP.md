@@ -77,7 +77,7 @@ The timings are *derived from the source clips*, not yet visually playtested in 
 
 - **The sword models require R15**. A simple fallback blade is displayed if the original sword model isn't installed. Check Roblox Studio game settings if your avatar is R6.
 - The uploaded `.rbxm` is an asset **model**, not a new game place. You must insert it inside the existing RIFTBOUND place.
-- The bundled animation pack's **Idle/Walk/Run** sequences are extracted for future locomotion blending, but this first build focuses on actual combat and skills. Normal Roblox walking animations are otherwise unchanged.
+- The imported **Idle / WalkWeaponShouldered / RunWeaponShouldered** clips now play while Great Sword is equipped and grounded. They pause for combat actions, and the other Specs keep their normal movement animations. If the clips cannot load, default Roblox movement is retained.
 - **Live/published experience:** Use the Animation Editor to publish the 15 sequences under the appropriate experience owner/group, then copy their new `rbxassetid://...` values into `src/shared/AnimationConfig.luau`. Blank IDs use temporary Studio preview IDs; those will *not* work in the live game.
 - Don't publish another creator's assets without appropriate rights/licensing. Verify that the animation pack permits reuse in your experience.
 
