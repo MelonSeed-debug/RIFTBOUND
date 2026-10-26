@@ -9,9 +9,9 @@ local Passive = {}
 local shieldModule = script.Parent:FindFirstChild("PillShield")
 local shieldOK, Shield = false, nil
 if shieldModule then shieldOK, Shield = pcall(require, shieldModule) end
-local function applyDamage(target, humanoid, amount)
+local function applyDamage(target, humanoid, amount, attacker)
 	if shieldOK and Shield then
-		Shield.Damage(target, humanoid, amount)
+		Shield.Damage(target, humanoid, amount, attacker)
 	else
 		humanoid:TakeDamage(amount)
 	end
@@ -48,7 +48,7 @@ function Passive.OnHit(player, target)
 	target:SetAttribute(key, expires)
 	-- Never override a longer instance of the same status.
 	fx:FireAllClients("PillImpact", target, name)
-	applyDamage(target, humanoid, cfg.Damage)
+	applyDamage(target, humanoid, cfg.Damage, player)
 	if name == "ChillPill" then
 		local old = humanoid.WalkSpeed
 		humanoid.WalkSpeed = math.max(6, old * (1 - effect.Amount))
