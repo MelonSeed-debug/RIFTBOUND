@@ -149,6 +149,7 @@ function QuestBoard.Init(player, gui)
 
 	local function refresh()
 		local level = player:GetAttribute("Level") or 1
+		local hasPermit = player:GetAttribute("QuestPermit_RiftInitiate") == true
 		local loaded = player:GetAttribute("ProgressLoaded") == true
 		local active = player:GetAttribute("QuestActiveId") or ""
 		local count = player:GetAttribute("QuestCount") or 0
@@ -175,23 +176,27 @@ function QuestBoard.Init(player, gui)
 				row.button.Text = count >= q.Count and "CLAIM" or "ABANDON"
 			elseif active ~= "" then
 				row.button.Text = "BUSY"
-			elseif level < q.RequiredLevel then
+			elseif level < q.RequiredLevel or (q.RequiredPermit and not hasPermit) then
 				row.button.Text = "LOCKED"
 			else
 				row.button.Text = "ACCEPT"
 			end
 			row.button.Active = loaded and (id == active or
-				(active == "" and level >= q.RequiredLevel and (not done or q.Repeatable)))
+				(active == "" and level >= q.RequiredLevel
+					and (not q.RequiredPermit or hasPermit)
+					and (not done or q.Repeatable)))
 			row.button.BackgroundColor3 = row.button.Active and colors.accent or Color3.fromRGB(84, 79, 109)
 			row.note.Text = (done and not q.Repeatable) and "COMPLETE" or
 				(level < q.RequiredLevel and ("Requires Lv " .. q.RequiredLevel) or
-				(q.Repeatable and "REPEATABLE" or "ONE TIME"))
+				(q.RequiredPermit and not hasPermit and "RIFT PERMIT REQUIRED" or
+				(q.Repeatable and "REPEATABLE" or "ONE TIME")))
 		end
 	end
 
 	for _, attribute in {"Level", "ProgressLoaded", "QuestActiveId", "QuestCount",
 		"QuestCompleted_FirstSteps", "QuestCompleted_ShieldWall",
-		"QuestCompleted_StreetPatrol", "QuestCompleted_RiftInitiation"} do
+		"QuestCompleted_StreetPatrol", "QuestCompleted_RiftInitiation",
+		"QuestCompleted_VoidTrial", "QuestPermit_RiftInitiate"} do
 		player:GetAttributeChangedSignal(attribute):Connect(refresh)
 	end
 	refresh()
@@ -200,6 +205,11 @@ function QuestBoard.Init(player, gui)
 		if feedbackConnected or not remote or not remote:IsA("RemoteEvent") then return end
 		feedbackConnected = true
 		remote.OnClientEvent:Connect(function(success, words)
+			if success == "OpenJournal" then
+				panel.Visible = true
+				refresh()
+				return
+			end
 			message.Text = tostring(words)
 			message.TextColor3 = success and Color3.fromRGB(136, 241, 194) or Color3.fromRGB(255, 154, 150)
 			refresh()
