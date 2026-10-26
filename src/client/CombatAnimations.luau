@@ -4,9 +4,22 @@
 local TweenService = game:GetService("TweenService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
-local AnimationClipProvider = game:GetService("AnimationClipProvider")
-local KeyframeSequenceProvider = game:GetService("KeyframeSequenceProvider")
-local Config = require(ReplicatedStorage:WaitForChild("Riftbound"):WaitForChild("Shared"):WaitForChild("AnimationConfig"))
+-- A missing Rojo-synced config must NEVER yield forever. The old unbounded
+-- WaitForChild stopped the client before building any UI.
+local function service(name)
+	local ok, result = pcall(function() return game:GetService(name) end)
+	return ok and result or nil
+end
+local AnimationClipProvider = service("AnimationClipProvider")
+local KeyframeSequenceProvider = service("KeyframeSequenceProvider")
+local shared = ReplicatedStorage:FindFirstChild("Riftbound")
+local sharedFolder = shared and (shared:FindFirstChild("Shared") or shared:WaitForChild("Shared", 3))
+local configModule = sharedFolder and (sharedFolder:FindFirstChild("AnimationConfig")
+	or sharedFolder:WaitForChild("AnimationConfig", 3))
+if not configModule or not configModule:IsA("ModuleScript") then
+	error("[RIFTBOUND Animations] AnimationConfig missing under ReplicatedStorage/Riftbound/Shared. Restart Rojo and reconnect Studio.")
+end
+local Config = require(configModule)
 local Motion = {}
 local states = setmetatable({}, {__mode = "k"})
 
@@ -118,12 +131,15 @@ local function resolveId(move)
 	local sequence = library:FindFirstChild(move)
 	if not sequence or not sequence:IsA("KeyframeSequence") then return nil end
 	if clipIds[sequence] then return clipIds[sequence] end
-	local ok, previewId = pcall(function()
-		return AnimationClipProvider:RegisterAnimationClip(sequence)
-	end)
-	if not ok or typeof(previewId) ~= "string" or previewId == "" then
-		-- Fallback API is deprecated but supports KeyframeSequence preview
-		-- in Studio versions which do not accept AnimationClip registration.
+	local ok, previewId = false, nil
+	if AnimationClipProvider then
+		ok, previewId = pcall(function()
+			return AnimationClipProvider:RegisterAnimationClip(sequence)
+		end)
+	end
+	if (not ok or typeof(previewId) ~= "string" or previewId == "")
+		and KeyframeSequenceProvider then
+		-- Legacy fallback for Studio versions which don't accept clips.
 		ok, previewId = pcall(function()
 			return KeyframeSequenceProvider:RegisterKeyframeSequence(sequence)
 		end)
