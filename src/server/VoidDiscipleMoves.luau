@@ -73,7 +73,8 @@ local function nearby(origin, radius, character, facing, minDot, maximumDistance
 			found[target] = true
 			local humanoid = target:FindFirstChildOfClass("Humanoid")
 			local root = target:FindFirstChild("HumanoidRootPart")
-			if humanoid and root and humanoid.Health > 0 then
+			if humanoid and root and humanoid.Health > 0
+				and target:GetAttribute("RiftSafeZone") ~= true then
 				-- Each target needs a real Humanoid and a root near the radius center.
 				local delta = root.Position - origin
 				local withinRadius = delta.Magnitude <= radius + 1.5
