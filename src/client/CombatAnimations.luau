@@ -127,6 +127,22 @@ local originalSources = {
 	DashRight={"Dual Axes Animations","dash right"},
 	DashBack={"Dual Axes Animations","back dah"},
 	Hit={"Dual Axes Animations","Flinch"},
+	-- These names were verified inside the supplied ORIGINAL .rbxm.
+	SwordM1_1={"Great Sword Animations","M1"},
+	SwordM1_2={"Great Sword Animations","M2"},
+	SwordM1_3={"Great Sword Animations","M3"},
+	SwordM1_4={"Great Sword Animations","M4"},
+	SwordHeavy={"Great Sword Animations","Greatsword Heavy"},
+	SwordBlock={"Great Sword Animations","Blocking"},
+	SwordParry={"Great Sword Animations","Parry"},
+	SwordParried={"Great Sword Animations","Parried"},
+	SwordDashAttack={"Great Sword Animations","DashAttack"},
+	SwordUplift={"Great Sword Animations","TitanBladeUpTilt"},
+	SwordSlam={"Great Sword Animations","TitanBladeAirSlam"},
+	SwordExecution={"Great Sword Animations","M5"},
+	SwordIdle={"Great Sword Animations","Idle"},
+	SwordWalk={"Great Sword Animations","WalkWeaponShouldered"},
+	SwordRun={"Great Sword Animations","RunWeaponShouldered"},
 }
 
 local function findSequence(move)
@@ -222,7 +238,8 @@ local function playAsset(character, s, move)
 		end
 		track = loaded
 		track.Priority = Enum.AnimationPriority.Action
-		track.Looped = move == "Block"
+		track.Looped = move == "Block" or move == "SwordBlock"
+			or move == "SwordIdle" or move == "SwordWalk" or move == "SwordRun"
 		s.tracks[move] = track
 	end
 	clearTweens(s)
@@ -241,33 +258,55 @@ end
 
 function Motion.Play(character, effect, value)
 	if not character or not character.Parent then return end
+	local sword = character:GetAttribute("RiftSwordEquipped") == true
 	local move
 	if effect == "Swing" then
-		move = "M1_" .. tostring(math.clamp(tonumber(value) or 1, 1, 4))
-	elseif effect == "HeavySwing" then move = "Heavy"
+		move = (sword and "SwordM1_" or "M1_")
+			.. tostring(math.clamp(tonumber(value) or 1, 1, 4))
+	elseif effect == "HeavySwing" then move = sword and "SwordHeavy" or "Heavy"
 	elseif effect == "Dash" then
-		if value == "Left" or value == "Right" or value == "Back" then
+		if sword then
+			move = "SwordDashAttack"
+		elseif value == "Left" or value == "Right" or value == "Back" then
 			move = "Dash" .. value
 		else
 			move = "Dash"
 		end
-	elseif effect == "Parry" then move = "Parry"
-	elseif effect == "Hit" then move = "Hit"
-	elseif effect == "GuardBreak" then move = "GuardBreak"
+	elseif effect == "Parry" then move = sword and "SwordParry" or "Parry"
+	elseif effect == "Hit" then move = sword and "SwordParried" or "Hit"
+	elseif effect == "GuardBreak" then move = sword and "SwordParried" or "GuardBreak"
+	elseif effect == "SwordAbility" and sword then
+		local mapping = {Z="SwordBlock",X="SwordDashAttack",
+			C="SwordUplift",V="SwordSlam",G="SwordExecution"}
+		move = mapping[value]
 	elseif effect == "Block" then
 		if value == false then
 			local s = getState(character)
 			s.sequence += 1
 			if s.tracks.Block then s.tracks.Block:Stop(0.12) end
+			if s.tracks.SwordBlock then s.tracks.SwordBlock:Stop(0.12) end
 			reset(character, s, 0.12)
 			return
 		end
-		move = "Block"
-	else return end
+		move = sword and "SwordBlock" or "Block"
+	end
+	if not move then return end
 
 	local s = getState(character)
 	s.sequence += 1
-	if not playAsset(character, s, move) then fallback(character, s, move, move == "Block") end
+	if not playAsset(character, s, move) then
+		-- Don't drop movement/attack feedback if an imported animation is
+		-- missing, invalid or not yet published. Legacy poses remain useful.
+		local simpleMove = move
+		if move:find("^SwordM1_") then simpleMove = "M1_" .. move:sub(-1)
+		elseif move == "SwordHeavy" or move == "SwordExecution"
+			or move == "SwordSlam" or move == "SwordUplift" then
+			simpleMove = "Heavy"
+		elseif move == "SwordBlock" then simpleMove = "Block"
+		elseif move == "SwordDashAttack" then simpleMove = "Dash"
+		elseif move == "SwordParried" then simpleMove = "Hit" end
+		fallback(character, s, simpleMove, move == "Block" or move == "SwordBlock")
+	end
 end
 
 return Motion
