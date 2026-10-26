@@ -26,10 +26,19 @@ if shieldModule then
 	if ok and type(loaded) == "table" then Shield = loaded
 	else warn("[RIFTBOUND] Pill Shield unavailable:", loaded) end
 end
+-- Optional Spec abilities must never block the core combat prototype.
+local Buzz = {Activate = function() return false end, Clear = function() end, ResetPlayer = function() end}
+local buzzModule = script:FindFirstChild("BuzzBoost") or script:WaitForChild("BuzzBoost", 3)
+if buzzModule then
+	local ok, loaded = pcall(require, buzzModule)
+	if ok and type(loaded) == "table" then Buzz = loaded
+	else warn("[RIFTBOUND] Buzz Boost unavailable:", loaded) end
+end
 local specRequest = rift.Remotes:FindFirstChild("SpecRequest")
 if specRequest then
 	specRequest.OnServerEvent:Connect(function(player, action)
-		if action == "PillShield" then Shield.Activate(player) end
+		if action == "PillShield" then Shield.Activate(player)
+		elseif action == "BuzzBoost" then Buzz.Activate(player) end
 	end)
 end
 local request = rift.Remotes.CombatRequest
@@ -225,6 +234,7 @@ local function setup(player)
 	if game:GetService("RunService"):IsStudio() then player:SetAttribute("EquippedSpec", "AshleySimmons") end
 	PillPassive.Reset(player)
 	Shield.ResetPlayer(player)
+	Buzz.ResetPlayer(player)
 	player.CharacterAdded:Connect(function(character)
 		local s = getState(player)
 		s.combo,s.lastHit,s.nextM1,s.nextDash = 0,0,0,0
@@ -232,6 +242,7 @@ local function setup(player)
 		s.nextHeavy,s.stunnedUntil,s.parryUntil,s.nextParry = 0,0,0,0
 		character:SetAttribute("RiftBlocking",false)
 		Shield.Clear(character)
+		Buzz.Clear(character)
 		PillPassive.Reset(player)
 	end)
 	if player.Character then player.Character:SetAttribute("RiftBlocking",false) end
