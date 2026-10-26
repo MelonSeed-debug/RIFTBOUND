@@ -8,12 +8,14 @@ local Workspace = game:GetService("Workspace")
 local mastery = require(ReplicatedStorage.Riftbound.Shared.MasteryConfig)
 local ashley = require(ReplicatedStorage.Riftbound.Shared.AshleySimmonsSpec)
 local void = require(ReplicatedStorage.Riftbound.Shared.VoidDiscipleSpec)
+local sword = require(ReplicatedStorage.Riftbound.Shared.GreatSwordSpec)
 
 local HUD = {}
 local ORDER = {"Z", "X", "C", "V", "G"}
 local SPEC_NAMES = {
 	AshleySimmons = "ASHLEY SIMMONS",
 	VoidDisciple = "VOID DISCIPLE",
+	GreatSword = "ABYSSAL COVENANT",
 }
 local PALETTE = {
 	orange = Color3.fromRGB(255, 146, 58),
@@ -59,6 +61,7 @@ local function frame(parent, name, pos, size, tint, alpha)
 end
 
 local function cooldownAttribute(spec, key)
+	if spec == "GreatSword" then return "Sword" .. key .. "ReadyAt" end
 	if spec == "VoidDisciple" then
 		return "Void" .. key .. "ReadyAt"
 	end
@@ -68,6 +71,7 @@ local function cooldownAttribute(spec, key)
 end
 
 local function moveName(spec, key)
+	if spec == "GreatSword" then return sword.Abilities[key].Name end
 	if spec == "VoidDisciple" then
 		return void.Abilities[key].Name
 	end
@@ -194,7 +198,8 @@ function HUD.Init(player, gui)
 	local lastSpec = ""
 	local function refresh()
 		local spec = player:GetAttribute("EquippedSpec")
-		local valid = spec == "AshleySimmons" or spec == "VoidDisciple"
+		local valid = spec == "AshleySimmons"
+			or spec == "VoidDisciple" or spec == "GreatSword"
 		sidebar.Visible = valid and not modalIsOpen()
 			and sidebar:GetAttribute("RiftHideForTouch") ~= true
 		if not valid then return end
@@ -238,7 +243,7 @@ function HUD.Init(player, gui)
 		end
 	end)
 	refresh()
-	print("[RIFTBOUND UI] Right-side skill list active for both Specs.")
+	print("[RIFTBOUND UI] Right-side skill list active for all three Specs.")
 end
 
 return HUD
