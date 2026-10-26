@@ -20,7 +20,7 @@ status("Rojo client LocalScript",client,"StarterPlayer/StarterPlayerScripts/Rift
 status("Rojo server Script",server,"ServerScriptService/RiftboundServer")
 status("Game shared folder",shared,"ReplicatedStorage/Riftbound/Shared")
 status("CombatRequest",remotes and remotes:FindFirstChild("CombatRequest"),"ReplicatedStorage/Riftbound/Remotes")
-for _, name in {"AnimationConfig","CombatConfig","WorldConfig","MasteryConfig"} do
+for _, name in {"AnimationConfig","CombatConfig","WorldConfig","MasteryConfig","GreatSwordSpec"} do
 	status(name,shared and shared:FindFirstChild(name),"ReplicatedStorage/Riftbound/Shared")
 end
 for _, name in {"CombatAnimations","ArtDecoUI","MainMenuUI","UIManager","VitalsHUD","ProgressionHUD","SpecAbilityHUD","InventoryUI"} do
@@ -33,6 +33,17 @@ local gauntlets=RS:FindFirstChild("Gauntlets Animations",true)
 	or W:FindFirstChild("Gauntlets Animations",true)
 status("Curated 21-clip animation folder",clips,"ReplicatedStorage/RIFTBOUND Animation Clips")
 status("Original weapon animation pack (Gauntlets)",gauntlets,"ReplicatedStorage (or Workspace) > Gauntlets Animations")
+local swordAssets=RS:FindFirstChild("RIFTBOUND Weapon Assets")
+local swordMesh=swordAssets and swordAssets:FindFirstChild("GreatSword")
+local originalSword=RS:FindFirstChild("Great Sword Animations",true)
+	or W:FindFirstChild("Great Sword Animations",true)
+status("Abyssal Covenant original sword mesh",swordMesh or originalSword,
+	"ReplicatedStorage/RIFTBOUND Weapon Assets/GreatSword or inserted original pack")
+status("Server GreatSwordMoves module",server and server:FindFirstChild("GreatSwordMoves"),
+	"ServerScriptService/RiftboundServer/GreatSwordMoves")
+local swordClip=clips and clips:FindFirstChild("SwordM1_1",true)
+status("SwordM1_1 animation",swordClip or originalSword,
+	"ReplicatedStorage/RIFTBOUND Animation Clips/SwordM1_1 or original pack")
 if clips then
 	local count=0
 	for _, object in clips:GetDescendants() do
