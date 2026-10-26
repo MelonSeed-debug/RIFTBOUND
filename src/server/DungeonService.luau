@@ -46,7 +46,7 @@ local function part(folder,name,where,size,tint,material,collide)
 end
 local function rune(folder,where,diameter,tint,transparency)
 	local p=part(folder,"Abyss Rune",where,
-		Vector3.new(diameter,0.18,diameter),tint,Enum.Material.Neon,false)
+		Vector3.new(0.18,diameter,diameter),tint,Enum.Material.Neon,false)
 	p.Shape=Enum.PartType.Cylinder
 	p.CFrame=p.CFrame*CFrame.Angles(0,0,math.rad(90))
 	p.Transparency=transparency or 0.27
