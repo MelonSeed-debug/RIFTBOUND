@@ -42,7 +42,7 @@ function HUD.Init(player,gui)
 	task.spawn(function()
 		while gui.Parent do
 			local isVoid=player:GetAttribute("EquippedSpec")==cfg.Id
-			dock.Visible=isVoid
+			dock.Visible=isVoid and dock:GetAttribute("RiftHideInCompact")~=true
 			if isVoid then
 				local now=workspace:GetServerTimeNow()
 				for key,cell in rows do
