@@ -326,7 +326,7 @@ local function buildTravel(parent)
 			destination.RequiredLevel, World.Zones[i].Color)
 		-- Return-to-hub beacon sits outside enemy spawn/quest interaction areas.
 		travelPad(parent, "Return from " .. destination.Id, "RETURN TO HAVEN",
-			Vector3.new(34, 0, destination.Destination.Z - 12),
+			Vector3.new(-34, 0, destination.Destination.Z - 12),
 			Vector3.new(0, 0, 25), 1, color.blue)
 	end
 end
