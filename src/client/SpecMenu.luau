@@ -67,10 +67,10 @@ function Menu.Init(player, request, gui)
 	panel.Name = "SpecSelection"
 	panel.AnchorPoint = Vector2.new(0.5, 0.5)
 	panel.Position = UDim2.fromScale(0.5, 0.47)
-	panel.Size = UDim2.new(0.94, 0, 0, 408)
+	panel.Size = UDim2.new(0.94, 0, 0, 480)
 	local sizeLimit = Instance.new("UISizeConstraint")
-	sizeLimit.MaxSize = Vector2.new(380, 408)
-	sizeLimit.MinSize = Vector2.new(290, 408)
+	sizeLimit.MaxSize = Vector2.new(380, 480)
+	sizeLimit.MinSize = Vector2.new(290, 480)
 	sizeLimit.Parent = panel
 	panel.BackgroundColor3 = colors.background
 	panel.BorderSizePixel = 0
@@ -122,15 +122,33 @@ function Menu.Init(player, request, gui)
 		UDim2.new(1,-144,0,15), colors.outline, 13)
 	local permitHint = label(upcoming, "Level 10 + Rift Initiation + Void Trial",
 		UDim2.new(1,-151,0,35), UDim2.fromOffset(12,23), 11, colors.muted, false)
-	local unarmed = button(panel, "GO UNARMED", UDim2.new(1, -44, 0, 37), UDim2.fromOffset(22, 295), colors.panel, 15)
-	local status = label(panel, "", UDim2.new(1, -44, 0, 24), UDim2.fromOffset(22, 340), 13, colors.secondary, true)
-	local footer = label(panel, "Complete the Void Trial to earn your second Spec.", UDim2.new(1, -44, 0, 20), UDim2.fromOffset(22, 374), 11, colors.muted, false)
+
+	local swordCard = Instance.new("Frame")
+	swordCard.Name = "GreatSwordSpec"
+	swordCard.Size = UDim2.new(1,-44,0,61)
+	swordCard.Position = UDim2.fromOffset(22,295)
+	swordCard.BackgroundColor3 = colors.panel
+	swordCard.BorderSizePixel = 0
+	round(swordCard,9)
+	swordCard.Parent = panel
+	Deco.Panel(swordCard)
+	label(swordCard, "ABYSSAL COVENANT", UDim2.new(1,-151,0,29),
+		UDim2.fromOffset(12,2), 15, colors.secondary, true)
+	label(swordCard, "Great Sword  /  Heavy melee", UDim2.new(1,-151,0,23),
+		UDim2.fromOffset(12,29), 11, colors.muted, false)
+	local swordEquip = button(swordCard, "EQUIP SWORD", UDim2.fromOffset(134,30),
+		UDim2.new(1,-144,0,15), colors.accent, 12)
+	local unarmed = button(panel, "GO UNARMED", UDim2.new(1, -44, 0, 37), UDim2.fromOffset(22, 366), colors.panel, 15)
+	local status = label(panel, "", UDim2.new(1, -44, 0, 24), UDim2.fromOffset(22, 409), 13, colors.secondary, true)
+	local footer = label(panel, "Great Sword is available immediately on the practice field.",
+		UDim2.new(1, -44, 0, 20), UDim2.fromOffset(22, 451), 11, colors.muted, false)
 
 	local function refresh()
 		local equipped = player:GetAttribute("EquippedSpec") or Registry.Default
 		local unlocked = player:GetAttribute("SpecUnlocked_AshleySimmons") == true
 		status.Text = equipped == "AshleySimmons" and "EQUIPPED: ASHLEY SIMMONS"
-			or (equipped == "VoidDisciple" and "EQUIPPED: VOID DISCIPLE" or "EQUIPPED: UNARMED")
+			or (equipped == "VoidDisciple" and "EQUIPPED: VOID DISCIPLE"
+				or (equipped == "GreatSword" and "EQUIPPED: GREAT SWORD" or "EQUIPPED: UNARMED"))
 		if equipped == "AshleySimmons" then
 			equip.Text = "CURRENTLY EQUIPPED"
 			equip.BackgroundColor3 = colors.outline
@@ -160,6 +178,18 @@ function Menu.Init(player, request, gui)
 			voidEquip.Active = false
 		end
 		voidEquip.BackgroundColor3 = voidEquip.Active and colors.accent or colors.outline
+		local hasSword = player:GetAttribute("SpecUnlocked_GreatSword") == true
+		if equipped == "GreatSword" then
+			swordEquip.Text = "EQUIPPED"
+			swordEquip.Active = false
+		elseif hasSword then
+			swordEquip.Text = "EQUIP SWORD"
+			swordEquip.Active = true
+		else
+			swordEquip.Text = "LOADING"
+			swordEquip.Active = false
+		end
+		swordEquip.BackgroundColor3 = swordEquip.Active and colors.accent or colors.outline
 		permitHint.Text = hasVoid and "TRIAL COMPLETE" or
 			(level < 10 and "REQUIRES LEVEL 10" or
 			(not hasPermit and "RIFT INITIATION FIRST" or "DEFEAT RIFT SENTINEL"))
@@ -173,6 +203,11 @@ function Menu.Init(player, request, gui)
 	voidEquip.Activated:Connect(function()
 		if voidEquip.Active and request then
 			request:FireServer("EquipSpec", "VoidDisciple")
+		end
+	end)
+	swordEquip.Activated:Connect(function()
+		if swordEquip.Active and request then
+			request:FireServer("EquipSpec", "GreatSword")
 		end
 	end)
 	unarmed.Activated:Connect(function()
@@ -191,6 +226,7 @@ function Menu.Init(player, request, gui)
 	player:GetAttributeChangedSignal("SpecUnlocked_AshleySimmons"):Connect(refresh)
 	player:GetAttributeChangedSignal("QuestPermit_RiftInitiate"):Connect(refresh)
 	player:GetAttributeChangedSignal("SpecUnlocked_VoidDisciple"):Connect(refresh)
+	player:GetAttributeChangedSignal("SpecUnlocked_GreatSword"):Connect(refresh)
 	player:GetAttributeChangedSignal("Level"):Connect(refresh)
 	refresh()
 	-- All navigation goes through MENU [M], never force Specs open on spawn.
