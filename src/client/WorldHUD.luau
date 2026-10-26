@@ -4,13 +4,14 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ContextActionService = game:GetService("ContextActionService")
 local TweenService = game:GetService("TweenService")
 local World = require(ReplicatedStorage.Riftbound.Shared.WorldConfig)
+local Deco = require(script.Parent.ArtDecoUI)
 
 local HUD = {}
 local colors = {
-	bg = Color3.fromRGB(19, 23, 38),
-	text = Color3.fromRGB(246, 241, 255),
-	muted = Color3.fromRGB(181, 186, 207),
-	safe = Color3.fromRGB(137, 240, 201),
+	bg = Deco.Ink,
+	text = Deco.Paper,
+	muted = Deco.Muted,
+	safe = Deco.PaleGold,
 }
 
 local function round(parent, amount)
@@ -47,7 +48,8 @@ function HUD.Init(player, gui)
 	header.BorderSizePixel = 0
 	header.BackgroundColor3 = colors.bg
 	header.Parent = gui
-	round(header, 10)
+	round(header, 5)
+	Deco.Button(header)
 	local sizeLimit = Instance.new("UISizeConstraint")
 	sizeLimit.MaxSize = Vector2.new(330, 65)
 	sizeLimit.MinSize = Vector2.new(200, 65)
@@ -74,13 +76,14 @@ function HUD.Init(player, gui)
 	panel.BorderSizePixel = 0
 	panel.Visible = false
 	panel.Parent = gui
-	round(panel,12)
+	round(panel,5)
+	Deco.Panel(panel)
 	local panelLimit = Instance.new("UISizeConstraint")
 	panelLimit.MaxSize = Vector2.new(390,330)
 	panelLimit.MinSize = Vector2.new(290,330)
 	panelLimit.Parent = panel
 	local edge = Instance.new("UIStroke")
-	edge.Color = Color3.fromRGB(132,115,203)
+	edge.Color = Deco.Gold
 	edge.Thickness = 1.5
 	edge.Parent = panel
 
@@ -94,7 +97,8 @@ function HUD.Init(player, gui)
 	close.Font = Enum.Font.GothamBold
 	close.BackgroundColor3 = Color3.fromRGB(53,46,79)
 	close.Parent = panel
-	round(close,7)
+	round(close,4)
+	Deco.Button(close)
 	close.Activated:Connect(function() panel.Visible = false end)
 
 	local entries = {
