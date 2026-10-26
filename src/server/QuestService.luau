@@ -10,13 +10,26 @@ local started = false
 function QuestService.Start()
 	if started then return end
 	local remotes = ReplicatedStorage:WaitForChild("Riftbound"):WaitForChild("Remotes")
-	local request = remotes:WaitForChild("QuestRequest", 5)
-	local fx = remotes:WaitForChild("QuestFX", 5)
-	if not request or not fx then
-		warn("[RIFTBOUND Quests] Quest remotes are missing; combat can continue.")
-		return
+	-- Handle old local Rojo project files that do not yet define these
+	-- events. New installs still define them in default.project.json.
+	local function ensureEvent(name)
+		local existing = remotes:FindFirstChild(name)
+		if existing and existing:IsA("RemoteEvent") then return existing end
+		if existing then
+			warn("[RIFTBOUND Quests] " .. name .. " exists but is not a RemoteEvent.")
+			return nil
+		end
+		local event = Instance.new("RemoteEvent")
+		event.Name = name
+		event.Parent = remotes
+		warn("[RIFTBOUND Quests] Created missing " .. name .. " RemoteEvent at runtime. Update default.project.json for persistent Rojo sync.")
+		return event
 	end
+	local request = ensureEvent("QuestRequest")
+	local fx = ensureEvent("QuestFX")
+	if not request or not fx then return end
 	started = true
+	print("[RIFTBOUND Quests] Quest service ready.")
 	request.OnServerEvent:Connect(function(player, action, questId)
 		if typeof(action) ~= "string" or #action > 20 then return end
 		local now = os.clock()
