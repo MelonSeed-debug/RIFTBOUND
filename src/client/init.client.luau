@@ -109,6 +109,10 @@ updateTouchAbilityTitles()
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "RIFTBOUND Controls"
+-- Required: in Sibling mode modal children render ABOVE their own
+-- background. Global mode made bright text/buttons appear blacked out when
+-- UIManager elevated the modal root ZIndex.
+gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 gui.ResetOnSpawn = false
 gui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
 local label = Instance.new("TextLabel")
@@ -221,6 +225,7 @@ end
 
 -- All large windows are mutually exclusive and panels adjust for the viewport.
 loadOptionalUI("UIManager")
+loadOptionalUI("MainMenuUI")
 
 -- Phase 1 combat feedback. Visuals are cosmetic and never determine damage.
 local comboLabel = Instance.new("TextLabel")
