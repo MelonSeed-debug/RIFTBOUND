@@ -12,6 +12,16 @@ return {
 			Ready = true,
 			StarterUnlocked = true, -- Prototype access; replace with progression unlocks later.
 		},
+		VoidDisciple = {
+			Id = "VoidDisciple",
+			Name = "Void Disciple",
+			Subtitle = "Future Spec / Rift attunement",
+			Description = "A future unlockable Spec. Its gameplay is not implemented yet.",
+			Ready = false,
+			StarterUnlocked = false,
+			RequiredLevel = 10,
+			RequiredPermit = "RiftInitiate",
+		},
 	},
-	Order = {"AshleySimmons"},
+	Order = {"AshleySimmons", "VoidDisciple"},
 }
