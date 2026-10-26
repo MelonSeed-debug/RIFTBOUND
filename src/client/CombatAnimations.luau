@@ -168,8 +168,11 @@ local function findSequence(move)
 end
 
 function Motion.GetStatus()
-	if findSequence("M1_1") then return "Imported animation clips found" end
-	if typeof(Config.Moves.M1_1)=="string" and Config.Moves.M1_1~="" then
+	if findSequence("M1_1") or findSequence("SwordM1_1") then
+		return "Imported animation clips found"
+	end
+	if (typeof(Config.Moves.M1_1)=="string" and Config.Moves.M1_1~="")
+		or (typeof(Config.Moves.SwordM1_1)=="string" and Config.Moves.SwordM1_1~="") then
 		return "Published animation IDs configured"
 	end
 	return "No animation clips: import the model into ReplicatedStorage"
@@ -314,6 +317,90 @@ function Motion.Play(character, effect, value)
 		elseif move == "SwordParried" then simpleMove = "Hit" end
 		fallback(character, s, simpleMove, move == "Block" or move == "SwordBlock")
 	end
+end
+
+-- Sword locomotion: cosmetic local-only blending; base controls, game stats
+-- and default Animate remain unchanged for the original Specs. It runs only
+-- after the animation module finished loading asynchronously (never blocks UI).
+local LOCOMOTION = {SwordIdle=true,SwordWalk=true,SwordRun=true}
+local bindings = setmetatable({}, {__mode="k"})
+
+local function stopLocomotion(state)
+	for name in LOCOMOTION do
+		local track = state.tracks[name]
+		if track and track.IsPlaying then track:Stop(0.12) end
+	end
+end
+
+local function playLocomotion(char,state,name)
+	local track=state.tracks[name]
+	if not track then
+		local id=resolveId(name)
+		if not id then return end
+		local hum=char:FindFirstChildOfClass("Humanoid")
+		local animator=hum and hum:FindFirstChildOfClass("Animator")
+		if not animator then return end
+		local animation=Instance.new("Animation")
+		animation.Name="Riftbound_"..name
+		animation.AnimationId=id
+		local ok,result=pcall(function()return animator:LoadAnimation(animation) end)
+		animation:Destroy()
+		if not ok or not result then
+			warn("[RIFTBOUND Sword] Movement animation failed:",name,result)
+			return
+		end
+		track=result
+		track.Priority=Enum.AnimationPriority.Movement
+		track.Looped=true
+		state.tracks[name]=track
+	end
+	if track.IsPlaying then return end
+	stopLocomotion(state)
+	track:Play(0.13,1,1)
+end
+
+function Motion.BindLocalPlayer(player)
+	if bindings[player] then return end
+	bindings[player]=true
+	task.spawn(function()
+		local lastCharacter=nil
+		while player.Parent do
+			local character=player.Character
+			if lastCharacter and lastCharacter~=character then
+				stopLocomotion(getState(lastCharacter))
+			end
+			lastCharacter=character
+			if character then
+				local s=getState(character)
+				local hum=character:FindFirstChildOfClass("Humanoid")
+				local active=character:GetAttribute("RiftSwordEquipped")==true
+					and hum and hum.Health>0
+					and hum.FloorMaterial~=Enum.Material.Air
+				if active then
+					local attacking=false
+					for key,track in s.tracks do
+						if not LOCOMOTION[key] and track.IsPlaying then
+							attacking=true
+							break
+						end
+					end
+					if attacking then
+						stopLocomotion(s)
+					else
+						local name="SwordIdle"
+						if hum.MoveDirection.Magnitude>0.15 then
+							name=hum.WalkSpeed>18 and "SwordRun" or "SwordWalk"
+						end
+						playLocomotion(character,s,name)
+					end
+				else
+					stopLocomotion(s)
+				end
+			end
+			task.wait(0.2)
+		end
+		bindings[player]=nil
+	end)
 end
 
 return Motion
