@@ -94,6 +94,21 @@ local function launch(character, goal, travel, color, onImpact)
 	end)
 end
 
+local function aimPoint(character, root, range)
+	local params = RaycastParams.new()
+	params.FilterType = Enum.RaycastFilterType.Exclude
+	params.FilterDescendantsInstances = {character}
+	params.IgnoreWater = true
+	local start = root.Position + Vector3.new(0, 1, 0)
+	local ray = Workspace:Raycast(start, root.CFrame.LookVector * range, params)
+	local point = ray and ray.Position or (start + root.CFrame.LookVector * range)
+	-- Euphoria from the passive temporarily throws off projectile aim.
+	if (character:GetAttribute("Pill_Euphoria") or 0) > os.clock() then
+		point += Vector3.new(rng:NextNumber(-4, 4), 0, rng:NextNumber(-4, 4))
+	end
+	return point
+end
+
 local function targets(center, radius, exclude)
 	local params = OverlapParams.new()
 	params.FilterType = Enum.RaycastFilterType.Exclude
@@ -184,6 +199,7 @@ end
 
 function Moves.Cast(player, key)
 	if player:GetAttribute("EquippedSpec") ~= "AshleySimmons" then return false end
+	if player.Character and player.Character:GetAttribute("RiftBlocking") == true then return false end
 	local character, humanoid, root = live(player)
 	if not character then return false end
 	if key == "C" then
@@ -221,7 +237,7 @@ function Moves.Cast(player, key)
 	elseif key == "V" then
 		local data = config.Abilities.V
 		if not ready(player, key, data.Cooldown) then return false end
-		local goal = root.Position + root.CFrame.LookVector * 19 + Vector3.new(0, 1, 0)
+		local goal = aimPoint(character, root, 19)
 		launch(character, goal, 0.48, Color3.fromRGB(210, 90, 245), function(position)
 			pulse(position, 7, Color3.fromRGB(185, 70, 240), 0.35)
 			fx:FireAllClients("TrippyExplosion", position)
@@ -234,7 +250,7 @@ function Moves.Cast(player, key)
 	elseif key == "G" then
 		local data = config.Ultimate
 		if not ready(player, key, data.Cooldown) then return false end
-		local center = root.Position + root.CFrame.LookVector * 22 + Vector3.new(0, 1, 0)
+		local center = aimPoint(character, root, 22)
 		local colors = {
 			Color3.fromRGB(100, 210, 255),
 			Color3.fromRGB(245, 110, 235),
