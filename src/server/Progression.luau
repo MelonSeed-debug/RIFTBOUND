@@ -5,10 +5,15 @@
 local Players = game:GetService("Players")
 local DataStoreService = game:GetService("DataStoreService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local HttpService = game:GetService("HttpService")
+local Workspace = game:GetService("Workspace")
 
 local cfg = require(ReplicatedStorage.Riftbound.Shared.LevelConfig)
 local questCfg = require(ReplicatedStorage.Riftbound.Shared.QuestConfig)
 local registry = require(ReplicatedStorage.Riftbound.Shared.SpecRegistry)
+local items = require(ReplicatedStorage.Riftbound.Shared.ItemConfig)
+local masteryConfig = require(ReplicatedStorage.Riftbound.Shared.MasteryConfig)
+local lootRng = Random.new()
 local feedback = ReplicatedStorage.Riftbound.Remotes:FindFirstChild("ProgressionFX")
 local Progression = {}
 local profiles = {}
@@ -50,7 +55,39 @@ local function publish(player, p)
 	player:SetAttribute("QuestPermit_RiftInitiate", p.questPermits.RiftInitiate == true)
 	for id, spec in registry.Specs do
 		player:SetAttribute("SpecUnlocked_" .. id, spec.StarterUnlocked == true or p.specUnlocks[id] == true)
+		player:SetAttribute("SpecMastery_" .. id, p.mastery[id] or 0)
 	end
+	player:SetAttribute("RiftInventoryJSON", HttpService:JSONEncode(p.inventory))
+	player:SetAttribute("EquippedGear", p.equippedGear)
+	player:SetAttribute("AbyssClears", p.abyssClears)
+end
+
+-- Inventory is capped by distinct stacks and per-stack quantity to keep saves small.
+local function addItemToProfile(p, itemId, amount)
+	if not items.Items[itemId] then return false end
+	amount = cleanInteger(amount, 1, items.MaxStack, 1)
+	local existing = p.inventory[itemId] or 0
+	local size = 0
+	for _ in p.inventory do size += 1 end
+	if existing == 0 and size >= items.MaxDistinctItems then return false end
+	if existing + amount > items.MaxStack then return false end
+	p.inventory[itemId] = existing + amount
+	p.revision += 1
+	p.dirty = true
+	return true
+end
+
+local function rollLoot(p, npcName)
+	local earned = {}
+	for _, drop in items.Loot[npcName] or {} do
+		if lootRng:NextNumber() <= drop.Chance then
+			local qty = drop.Amount or 1
+			if addItemToProfile(p, drop.Item, qty) then
+				table.insert(earned, {Item=drop.Item, Amount=qty})
+			end
+		end
+	end
+	return earned
 end
 
 local function addXP(p, amount)
@@ -92,6 +129,19 @@ local function load(player, p)
 		p.xp = cleanInteger(saved.xp, 0, 1000000000, 0)
 		p.coins = cleanInteger(saved.coins, 0, 1000000000, 0)
 		p.kills = cleanInteger(saved.kills, 0, 1000000000, 0)
+		local savedItems = typeof(saved.inventory) == "table" and saved.inventory or {}
+		for itemId in items.Items do
+			local amount = cleanInteger(savedItems[itemId], 0, items.MaxStack, 0)
+			if amount > 0 then p.inventory[itemId] = amount end
+		end
+		local gear = typeof(saved.equippedGear) == "string" and saved.equippedGear or ""
+		p.equippedGear = items.Items[gear] and items.Items[gear].Kind == "Gear"
+			and (p.inventory[gear] or 0) > 0 and gear or ""
+		local savedMastery = typeof(saved.mastery) == "table" and saved.mastery or {}
+		for id in registry.Specs do
+			p.mastery[id] = cleanInteger(savedMastery[id], 0, masteryConfig.MaxMastery, 0)
+		end
+		p.abyssClears = cleanInteger(saved.abyssClears, 0, 999999, 0)
 		local quests = typeof(saved.quests) == "table" and saved.quests or {}
 		local requestedActive = typeof(quests.active) == "string" and quests.active or ""
 		p.questActive = questCfg.Quests[requestedActive] and requestedActive or ""
@@ -154,6 +204,7 @@ function Progression.Initialize(player)
 		pendingXP = 0, pendingCoins = 0, pendingKills = 0,
 		questActive = "", questCount = 0, questCompleted = {}, questPermits = {},
 		specUnlocks = {}, equippedSpec = registry.Default,
+		inventory = {}, equippedGear = "", mastery = {}, abyssClears = 0,
 		revision = 0, saving = false,
 	}
 	profiles[player] = p
@@ -168,6 +219,20 @@ function Progression.AwardNPCDefeat(player, npcName)
 	local xp, coins = reward.XP, reward.Coins
 	local levelsGained = applyReward(p, xp, coins, 1)
 	if p.loaded then
+		local spec = player:GetAttribute("EquippedSpec")
+		if spec and registry.Specs[spec] then
+			local prev = p.mastery[spec] or 0
+			p.mastery[spec] = math.min(masteryConfig.MaxMastery, prev + 1)
+			p.revision += 1
+			p.dirty = true
+		end
+		local loot = rollLoot(p, npcName)
+		if #loot > 0 then
+			local drop = loot[1]
+			local info = items.Items[drop.Item]
+			player:SetAttribute("LastLoot", "+" .. drop.Amount .. " " .. info.Name)
+			player:SetAttribute("LastLootSerial", (player:GetAttribute("LastLootSerial") or 0) + 1)
+		end
 		local activeDefinition = questCfg.Quests[p.questActive]
 		if activeDefinition and p.questCount < activeDefinition.Count
 			and (activeDefinition.Target == "Any" or activeDefinition.Target == npcName) then
@@ -197,6 +262,10 @@ function Progression.AcceptQuest(player, questId)
 	if not definition then return false, "Unknown quest." end
 	if p.questActive ~= "" then return false, "Finish or abandon your active quest first." end
 	if p.level < definition.RequiredLevel then return false, "Reach level " .. definition.RequiredLevel .. " first." end
+	if definition.PrerequisiteQuest and not p.questCompleted[definition.PrerequisiteQuest] then
+		local prior = questCfg.Quests[definition.PrerequisiteQuest]
+		return false, "Complete " .. (prior and prior.Name or "the previous story quest") .. " first."
+	end
 	if definition.RequiredPermit and p.questPermits[definition.RequiredPermit] ~= true then
 		return false, "Complete Rift Initiation first."
 	end
@@ -207,6 +276,109 @@ function Progression.AcceptQuest(player, questId)
 	p.dirty = true
 	publish(player, p)
 	return true, "Quest accepted: " .. definition.Name
+end
+
+-- Only trusted server NPC prompt handlers may advance Talk:* objectives.
+function Progression.AdvanceObjective(player, objective)
+	local p = profiles[player]
+	if not p or not p.loaded or typeof(objective) ~= "string" then return false end
+	local definition = questCfg.Quests[p.questActive]
+	if not definition or definition.Target ~= objective or p.questCount >= definition.Count then return false end
+	p.questCount += 1
+	p.revision += 1
+	p.dirty = true
+	publish(player,p)
+	return true
+end
+
+function Progression.GrantItem(player, itemId, amount)
+	local p = profiles[player]
+	if not p or not p.loaded then return false end
+	if not addItemToProfile(p,itemId,amount) then return false end
+	publish(player,p)
+	return true
+end
+
+function Progression.BuyItem(player, itemId, shopId)
+	local p=profiles[player]
+	local info=typeof(itemId)=="string" and items.Items[itemId]
+	if not p or not p.loaded then return false,"Progress is loading." end
+	if not info or info.Shop ~= shopId then return false,"Item not sold here." end
+	if p.level < (info.MinLevel or 1) then return false,"Requires level "..info.MinLevel.."." end
+	if p.coins < info.Price then return false,"Not enough Rift Coins." end
+	if not addItemToProfile(p,itemId,1) then return false,"Inventory full or stack at 99." end
+	p.coins -= info.Price
+	publish(player,p)
+	return true,"Bought "..info.Name.." for "..info.Price.." Rift Coins."
+end
+
+function Progression.SellItem(player,itemId)
+	local p=profiles[player]
+	local info=typeof(itemId)=="string" and items.Items[itemId]
+	if not p or not p.loaded or not info then return false,"Unavailable." end
+	if info.Kind ~= "Material" or not info.SellValue then return false,"Only materials can be sold." end
+	if (p.inventory[itemId] or 0)<1 then return false,"You do not have that item." end
+	p.inventory[itemId] -= 1
+	if p.inventory[itemId]==0 then p.inventory[itemId]=nil end
+	p.coins=math.min(1000000000,p.coins+info.SellValue)
+	p.revision+=1 p.dirty=true
+	publish(player,p)
+	return true,"Sold "..info.Name.." for "..info.SellValue.." Rift Coins."
+end
+
+function Progression.EquipGear(player,itemId)
+	local p=profiles[player]
+	if not p or not p.loaded then return false,"Progress is loading." end
+	local info=typeof(itemId)=="string" and items.Items[itemId]
+	if itemId ~= "" and (not info or info.Kind ~= "Gear" or (p.inventory[itemId] or 0)<1) then
+		return false,"Gear is not owned."
+	end
+	if itemId ~= "" and p.level < (info.MinLevel or 1) then return false,"Level too low." end
+	p.equippedGear=itemId
+	p.revision+=1 p.dirty=true
+	publish(player,p)
+	return true,itemId=="" and "Unequipped gear." or ("Equipped "..info.Name..".")
+end
+
+function Progression.UseItem(player,itemId)
+	local p=profiles[player]
+	local info=typeof(itemId)=="string" and items.Items[itemId]
+	if not p or not p.loaded then return false,"Progress is loading." end
+	if not info or info.Kind~="Consumable" or (p.inventory[itemId] or 0)<1 then
+		return false,"Consumable not owned."
+	end
+	local char=player.Character
+	local hum=char and char:FindFirstChildOfClass("Humanoid")
+	if not hum or hum.Health<=0 then return false,"You must be alive." end
+	local now=Workspace:GetServerTimeNow()
+	if (player:GetAttribute("LastConsumableAt") or 0)+2 > now then
+		return false,"Consumables are on cooldown."
+	end
+	if info.Restore and hum.Health>=hum.MaxHealth then return false,"Health is already full." end
+	p.inventory[itemId]-=1
+	if p.inventory[itemId]==0 then p.inventory[itemId]=nil end
+	player:SetAttribute("LastConsumableAt",now)
+	if info.Restore then
+		hum.Health=math.min(hum.MaxHealth,hum.Health+info.Restore)
+	elseif info.Buff=="Damage" then
+		char:SetAttribute("RiftDamageBuffMultiplier",info.BuffValue)
+		char:SetAttribute("RiftDamageBuffEnds",now+info.Duration)
+	elseif info.Buff=="Defense" then
+		char:SetAttribute("RiftDefenseBuffMultiplier",info.BuffValue)
+		char:SetAttribute("RiftDefenseBuffEnds",now+info.Duration)
+	end
+	p.revision+=1 p.dirty=true
+	publish(player,p)
+	return true,"Used "..info.Name.."."
+end
+
+function Progression.RecordAbyssClear(player)
+	local p=profiles[player]
+	if not p or not p.loaded then return false end
+	p.abyssClears=math.min(999999,p.abyssClears+1)
+	p.revision+=1 p.dirty=true
+	publish(player,p)
+	return true
 end
 
 function Progression.AbandonQuest(player)
@@ -285,7 +457,11 @@ function Progression.Save(player)
 			equipped = p.equippedSpec,
 			unlocked = table.clone(p.specUnlocks),
 		},
-		version = 3,
+		inventory = table.clone(p.inventory),
+		equippedGear = p.equippedGear,
+		mastery = table.clone(p.mastery),
+		abyssClears = p.abyssClears,
+		version = 4,
 	}
 	local success, err = pcall(function()
 		store:UpdateAsync("Player_" .. tostring(player.UserId), function()
