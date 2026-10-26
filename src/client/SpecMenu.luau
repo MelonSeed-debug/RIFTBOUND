@@ -112,18 +112,21 @@ function Menu.Init(player, request, gui)
 	upcoming.BackgroundColor3 = colors.panel
 	round(upcoming, 9)
 	upcoming.Parent = panel
-	label(upcoming, "VOID DISCIPLE  /  COMING SOON", UDim2.new(1,-20,0,26),
+	label(upcoming, "VOID DISCIPLE", UDim2.new(1,-20,0,26),
 		UDim2.fromOffset(12,3), 14, colors.secondary, true)
-	local permitHint = label(upcoming, "Requires Level 10 + Rift Initiation quest",
-		UDim2.new(1,-20,0,22), UDim2.fromOffset(12,28), 12, colors.muted, false)
+	local voidEquip = button(upcoming, "LOCKED", UDim2.fromOffset(134, 27),
+		UDim2.new(1,-144,0,15), colors.outline, 13)
+	local permitHint = label(upcoming, "Level 10 + Rift Initiation + Void Trial",
+		UDim2.new(1,-151,0,35), UDim2.fromOffset(12,23), 11, colors.muted, false)
 	local unarmed = button(panel, "GO UNARMED", UDim2.new(1, -44, 0, 37), UDim2.fromOffset(22, 295), colors.panel, 15)
 	local status = label(panel, "", UDim2.new(1, -44, 0, 24), UDim2.fromOffset(22, 340), 13, colors.secondary, true)
-	local footer = label(panel, "Complete quests to unlock future Specs.", UDim2.new(1, -44, 0, 20), UDim2.fromOffset(22, 374), 11, colors.muted, false)
+	local footer = label(panel, "Complete the Void Trial to earn your second Spec.", UDim2.new(1, -44, 0, 20), UDim2.fromOffset(22, 374), 11, colors.muted, false)
 
 	local function refresh()
 		local equipped = player:GetAttribute("EquippedSpec") or Registry.Default
 		local unlocked = player:GetAttribute("SpecUnlocked_AshleySimmons") == true
-		status.Text = equipped == "AshleySimmons" and "EQUIPPED: ASHLEY SIMMONS" or "EQUIPPED: UNARMED"
+		status.Text = equipped == "AshleySimmons" and "EQUIPPED: ASHLEY SIMMONS"
+			or (equipped == "VoidDisciple" and "EQUIPPED: VOID DISCIPLE" or "EQUIPPED: UNARMED")
 		if equipped == "AshleySimmons" then
 			equip.Text = "CURRENTLY EQUIPPED"
 			equip.BackgroundColor3 = colors.outline
@@ -139,14 +142,33 @@ function Menu.Init(player, request, gui)
 		end
 		unarmed.Text = equipped == Registry.Default and "CURRENTLY UNARMED" or "UNEQUIP / GO UNARMED"
 		unarmed.Active = equipped ~= Registry.Default
-		permitHint.Text = (player:GetAttribute("QuestPermit_RiftInitiate") == true)
-			and "Rift Initiate permit earned - gameplay coming soon"
-			or "Requires Level 10 + Rift Initiation quest"
+		local level = player:GetAttribute("Level") or 1
+		local hasPermit = player:GetAttribute("QuestPermit_RiftInitiate") == true
+		local hasVoid = player:GetAttribute("SpecUnlocked_VoidDisciple") == true
+		if equipped == "VoidDisciple" then
+			voidEquip.Text = "EQUIPPED"
+			voidEquip.Active = false
+		elseif hasVoid and hasPermit and level >= 10 then
+			voidEquip.Text = "EQUIP VOID"
+			voidEquip.Active = true
+		else
+			voidEquip.Text = "LOCKED"
+			voidEquip.Active = false
+		end
+		voidEquip.BackgroundColor3 = voidEquip.Active and colors.accent or colors.outline
+		permitHint.Text = hasVoid and "TRIAL COMPLETE" or
+			(level < 10 and "REQUIRES LEVEL 10" or
+			(not hasPermit and "RIFT INITIATION FIRST" or "DEFEAT RIFT SENTINEL"))
 	end
 
 	equip.Activated:Connect(function()
 		if equip.Active and request then
 			request:FireServer("EquipSpec", "AshleySimmons")
+		end
+	end)
+	voidEquip.Activated:Connect(function()
+		if voidEquip.Active and request then
+			request:FireServer("EquipSpec", "VoidDisciple")
 		end
 	end)
 	unarmed.Activated:Connect(function()
@@ -166,6 +188,8 @@ function Menu.Init(player, request, gui)
 	player:GetAttributeChangedSignal("EquippedSpec"):Connect(refresh)
 	player:GetAttributeChangedSignal("SpecUnlocked_AshleySimmons"):Connect(refresh)
 	player:GetAttributeChangedSignal("QuestPermit_RiftInitiate"):Connect(refresh)
+	player:GetAttributeChangedSignal("SpecUnlocked_VoidDisciple"):Connect(refresh)
+	player:GetAttributeChangedSignal("Level"):Connect(refresh)
 	refresh()
 	panel.Visible = (player:GetAttribute("EquippedSpec") or Registry.Default) == Registry.Default
 end
