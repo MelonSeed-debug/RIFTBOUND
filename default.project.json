@@ -31,6 +31,21 @@
           },
           "QuestFX": {
             "$className": "RemoteEvent"
+          },
+          "EconomyRequest": {
+            "$className": "RemoteEvent"
+          },
+          "EconomyFX": {
+            "$className": "RemoteEvent"
+          },
+          "DialogueFX": {
+            "$className": "RemoteEvent"
+          },
+          "MasteryFX": {
+            "$className": "RemoteEvent"
+          },
+          "DungeonFX": {
+            "$className": "RemoteEvent"
           }
         }
       }
