@@ -42,7 +42,7 @@ if ashleyModule then
 	if ok and type(loaded) == "table" then AshleyMoves = loaded
 	else warn("[RIFTBOUND] Ashley moves unavailable:", loaded) end
 end
-local specRequest = rift.Remotes:FindFirstChild("SpecRequest")
+local specRequest = rift.Remotes:WaitForChild("SpecRequest", 5)
 if specRequest then
 	specRequest.OnServerEvent:Connect(function(player, action)
 		if action == "PillShield" then Shield.Activate(player)
