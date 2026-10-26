@@ -11,6 +11,16 @@ local request = rift.Remotes.CombatRequest
 local fx = rift.Remotes.CombatFX
 local specFX = rift.Remotes:WaitForChild("SpecFX", 5)
 local specRequest = rift.Remotes:WaitForChild("SpecRequest", 5)
+local localPlayer = Players.LocalPlayer
+local function fireSpec(ashleyAction, voidAction)
+	if not specRequest then return end
+	local equipped = localPlayer:GetAttribute("EquippedSpec")
+	if equipped == "AshleySimmons" then
+		specRequest:FireServer(ashleyAction)
+	elseif equipped == "VoidDisciple" then
+		specRequest:FireServer(voidAction)
+	end
+end
 -- Optional animation layer must not disable combat inputs.
 local Motion = {Play = function() end}
 local motionModule = script:FindFirstChild("CombatAnimations") or script:WaitForChild("CombatAnimations", 3)
@@ -41,16 +51,16 @@ local function dash(_, inputState)
 	return Enum.ContextActionResult.Sink
 end
 ContextActionService:BindAction("RiftPillShield", function(_, inputState)
-	if inputState == Enum.UserInputState.Begin and specRequest then
-		specRequest:FireServer("PillShield")
+	if inputState == Enum.UserInputState.Begin then
+		fireSpec("PillShield", "VoidGuard")
 	end
 	return Enum.ContextActionResult.Sink
 end, true, Enum.KeyCode.Z, Enum.KeyCode.DPadUp)
 ContextActionService:SetTitle("RiftPillShield", "Shield")
 ContextActionService:SetPosition("RiftPillShield", UDim2.new(1,-300,1,-135))
 ContextActionService:BindAction("RiftBuzzBoost", function(_, inputState)
-	if inputState == Enum.UserInputState.Begin and specRequest then
-		specRequest:FireServer("BuzzBoost")
+	if inputState == Enum.UserInputState.Begin then
+		fireSpec("BuzzBoost", "VoidStep")
 	end
 	return Enum.ContextActionResult.Sink
 end, true, Enum.KeyCode.X, Enum.KeyCode.DPadLeft)
@@ -71,19 +81,19 @@ ContextActionService:SetPosition("RiftDash",UDim2.new(1,-145,1,-225))
 
 
 -- Ashley's remaining abilities: C, V and G, including gamepad and touch.
-local function bindSpecAction(name, action, key, gamepad, buttonTitle, touchPosition)
+local function bindSpecAction(name, action, voidAction, key, gamepad, buttonTitle, touchPosition)
 	ContextActionService:BindAction(name, function(_, state)
-		if state == Enum.UserInputState.Begin and specRequest then
-			specRequest:FireServer(action)
+		if state == Enum.UserInputState.Begin then
+			fireSpec(action, voidAction)
 		end
 		return Enum.ContextActionResult.Sink
 	end, true, key, gamepad)
 	ContextActionService:SetTitle(name, buttonTitle)
 	ContextActionService:SetPosition(name, touchPosition)
 end
-bindSpecAction("RiftRaveRush", "RaveRush", Enum.KeyCode.C, Enum.KeyCode.DPadRight, "Rave", UDim2.new(1,-355,1,-315))
-bindSpecAction("RiftTrippyToss", "TrippyToss", Enum.KeyCode.V, Enum.KeyCode.ButtonL1, "Trippy", UDim2.new(1,-230,1,-320))
-bindSpecAction("RiftFrenzy", "Frenzy", Enum.KeyCode.G, Enum.KeyCode.ButtonY, "Frenzy", UDim2.new(1,-110,1,-320))
+bindSpecAction("RiftRaveRush", "RaveRush", "VoidGrasp", Enum.KeyCode.C, Enum.KeyCode.DPadRight, "Rave", UDim2.new(1,-355,1,-315))
+bindSpecAction("RiftTrippyToss", "TrippyToss", "VoidCleave", Enum.KeyCode.V, Enum.KeyCode.ButtonL1, "Trippy", UDim2.new(1,-230,1,-320))
+bindSpecAction("RiftFrenzy", "Frenzy", "VoidNova", Enum.KeyCode.G, Enum.KeyCode.ButtonY, "Frenzy", UDim2.new(1,-110,1,-320))
 
 local gui = Instance.new("ScreenGui")
 gui.Name = "RIFTBOUND Controls"
@@ -109,6 +119,18 @@ if hudModule and hudModule:IsA("ModuleScript") then
 		if not built then warn("[RIFTBOUND] Progression HUD failed:", err) end
 	else
 		warn("[RIFTBOUND] Progression HUD unavailable:", hud)
+	end
+end
+
+-- Optional Void cooldowns: missing module must never block combat.
+local voidHUDModule = script:FindFirstChild("VoidDiscipleHUD") or script:WaitForChild("VoidDiscipleHUD", 3)
+if voidHUDModule and voidHUDModule:IsA("ModuleScript") then
+	local ok, hud = pcall(require, voidHUDModule)
+	if ok and type(hud) == "table" and type(hud.Init) == "function" then
+		local loaded, err = pcall(hud.Init, Players.LocalPlayer, gui)
+		if not loaded then warn("[RIFTBOUND] Void HUD could not initialize:", err) end
+	else
+		warn("[RIFTBOUND] Void HUD unavailable:", hud)
 	end
 end
 
@@ -476,6 +498,20 @@ specFX.OnClientEvent:Connect(function(effect, target, status)
 		return
 	elseif effect == "FrenzyCast" then
 		floatingText(root, "FRENZY!", Color3.fromRGB(255, 100, 195))
+		return
+	elseif effect == "VoidMark" then
+		floatingText(root, "VOID MARK " .. tostring(status) .. "/3", Color3.fromRGB(185, 128, 255))
+		return
+	elseif effect == "VoidBurst" then
+		floatingText(root, "VOID BURST!", Color3.fromRGB(233, 151, 255))
+		shockwave(root, Color3.fromRGB(168, 87, 255), 7)
+		return
+	elseif effect == "VoidGuard" or effect == "VoidStep" or effect == "VoidNova" then
+		local names = {VoidGuard="ABYSS GUARD!", VoidStep="VOID STEP!", VoidNova="ABYSS NOVA!"}
+		floatingText(root, names[effect], Color3.fromRGB(161, 155, 255))
+		return
+	elseif effect == "VoidGrasp" or effect == "VoidCleave" then
+		floatingText(root, effect == "VoidGrasp" and "SHADOW GRASP!" or "RIFT CLEAVE!", Color3.fromRGB(202, 135, 255))
 		return
 	elseif effect ~= "PillImpact" then
 		return
