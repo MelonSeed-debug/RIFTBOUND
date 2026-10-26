@@ -385,10 +385,19 @@ local function spawnOne(folder, center, definition, hooks)
 end
 
 function NPCs.Start(hooks)
-	if started or not cfg or cfg.Enabled == false then return end
+	if started or not cfg then return end
 	if cfg.StudioOnly and not RunService:IsStudio() then return end
 	started = true
 	activeHooks = hooks
+
+	-- Keep server-controlled challenge/boss spawning functional while removing
+	-- the repetitive ambient bandits and enemies from the flat field.
+	if cfg.Enabled == false then
+		local previous = Workspace:FindFirstChild("RIFTBOUND Enemies")
+		if previous then previous:Destroy() end
+		print("[RIFTBOUND NPC] Roaming enemies disabled; scripted boss encounters available.")
+		return
+	end
 
 	local folder = Workspace:FindFirstChild("RIFTBOUND Enemies")
 	if not folder then
