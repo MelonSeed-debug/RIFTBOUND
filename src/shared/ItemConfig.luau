@@ -28,8 +28,8 @@ return {
 			SellValue=225, Color=Color3.fromRGB(252,113,209)},
 	},
 	ShopLocations = {
-		Apothecary = Vector3.new(61,0,-2),
-		Gear = Vector3.new(-66,0,-6),
+		Apothecary = Vector3.new(23,0,17),
+		Gear = Vector3.new(-26,0,16),
 	},
 	Shops = {
 		Apothecary = {Name="HAVEN APOTHECARY", Stock={"FieldBandage","RiftTonic","EmberDraught","WardVial"}},
