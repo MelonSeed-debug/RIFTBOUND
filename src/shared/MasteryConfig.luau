@@ -31,6 +31,11 @@ Mastery.SkillActions = {
 	VoidGrasp = {Spec="VoidDisciple", Key="C"},
 	VoidCleave = {Spec="VoidDisciple", Key="V"},
 	VoidNova = {Spec="VoidDisciple", Key="G"},
+	SwordGuard = {Spec="GreatSword", Key="Z"},
+	SwordLunge = {Spec="GreatSword", Key="X"},
+	SwordUplift = {Spec="GreatSword", Key="C"},
+	SwordSlam = {Spec="GreatSword", Key="V"},
+	SwordExecution = {Spec="GreatSword", Key="G"},
 }
 
 function Mastery.XPForLevel(level)
