@@ -109,6 +109,56 @@ end
 -- never work in a published experience, so real uploaded IDs take priority.
 local clipIds = setmetatable({}, {__mode = "k"})
 local lastMissingWarning = false
+
+-- Players sometimes import a model one level too deep or into Workspace,
+-- or only have the ORIGINAL 150+ pack after a failed download. Recognize
+-- both situations without making anyone import the ZIP again.
+local originalSources = {
+	M1_1={"Gauntlets Animations","M1 - 1"},
+	M1_2={"Gauntlets Animations","M1 - 2"},
+	M1_3={"Gauntlets Animations","M1 - 3"},
+	M1_4={"Gauntlets Animations","M1 - 4"},
+	Heavy={"Gauntlets Animations","Gauntlet Heavy"},
+	Block={"Gauntlets Animations","blocking idle"},
+	Parry={"Gauntlets Animations","parry 1"},
+	GuardBreak={"Gauntlets Animations","Gauntlets_Parried"},
+	Dash={"Dual Axes Animations","front dash"},
+	DashLeft={"Dual Axes Animations","dash left"},
+	DashRight={"Dual Axes Animations","dash right"},
+	DashBack={"Dual Axes Animations","back dah"},
+	Hit={"Dual Axes Animations","Flinch"},
+}
+
+local function findSequence(move)
+	local library=ReplicatedStorage:FindFirstChild(Config.PreviewFolder,true)
+		or workspace:FindFirstChild(Config.PreviewFolder,true)
+	local sequence=library and library:FindFirstChild(move,true)
+	if sequence and sequence:IsA("KeyframeSequence") then
+		return sequence
+	end
+	local source=originalSources[move]
+	if not source then return nil end
+	for _, root in {ReplicatedStorage, workspace} do
+		local family=root:FindFirstChild(source[1],true)
+		if family then
+			local saves=family:FindFirstChild("AnimSaves",true)
+			local original=saves and saves:FindFirstChild(source[2],true)
+			if original and original:IsA("KeyframeSequence") then
+				return original
+			end
+		end
+	end
+	return nil
+end
+
+function Motion.GetStatus()
+	if findSequence("M1_1") then return "Imported animation clips found" end
+	if typeof(Config.Moves.M1_1)=="string" and Config.Moves.M1_1~="" then
+		return "Published animation IDs configured"
+	end
+	return "No animation clips: import the model into ReplicatedStorage"
+end
+
 local function resolveId(move)
 	local id = Config.Moves[move]
 	if typeof(id) == "string" and id ~= "" then
@@ -118,18 +168,16 @@ local function resolveId(move)
 	if Config.StudioPreview ~= true or not RunService:IsStudio() then
 		return nil
 	end
-	local library = ReplicatedStorage:FindFirstChild(Config.PreviewFolder)
-	if not library then
+	local sequence = findSequence(move)
+	if not sequence then
 		if not lastMissingWarning then
 			lastMissingWarning = true
-			warn("[RIFTBOUND Animations] Import RIFTBOUND_Combat_Animation_Clips.rbxm " ..
-				"into ReplicatedStorage for local animation preview. " ..
-				"Using procedural motion until then.")
+			warn("[RIFTBOUND Animations] No KeyframeSequences found for",move,
+				"Import either original 150+ pack or curated RIFTBOUND Animation Clips" ..
+				" into ReplicatedStorage. Procedural fallback is active.")
 		end
 		return nil
 	end
-	local sequence = library:FindFirstChild(move)
-	if not sequence or not sequence:IsA("KeyframeSequence") then return nil end
 	if clipIds[sequence] then return clipIds[sequence] end
 	local ok, previewId = false, nil
 	if AnimationClipProvider then
