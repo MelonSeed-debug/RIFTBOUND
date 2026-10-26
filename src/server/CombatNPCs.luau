@@ -14,6 +14,7 @@ local combatFX = ReplicatedStorage.Riftbound.Remotes.CombatFX
 local random = Random.new()
 local NPCs = {}
 local started = false
+local activeHooks = nil
 
 local TYPES = {}
 for _, template in world.EnemySpawns do
@@ -362,23 +363,31 @@ local function spawnOne(folder, center, definition, hooks)
 				local paid, err = pcall(hooks.AwardDefeat, killer, definition.Name)
 				if not paid then warn("[RIFTBOUND NPC] Failed to award defeat:", err) end
 			end
+			if killer and definition.OnDefeat then
+				local ok,err = pcall(definition.OnDefeat,killer,model)
+				if not ok then warn("[RIFTBOUND NPC] Boss defeated callback failed:",err) end
+			end
 		end
 		task.delay(3, function()
 			if model.Parent then model:Destroy() end
 		end)
-		task.delay(cfg.RespawnDelay, function()
-			if not folder.Parent then return end
-			local ok, err = pcall(spawnOne, folder, center, definition, hooks)
-			if not ok then warn("[RIFTBOUND NPC] Respawn failed:", err) end
-		end)
+		if not definition.NoRespawn then
+			task.delay(cfg.RespawnDelay, function()
+				if not folder.Parent then return end
+				local ok, err = pcall(spawnOne, folder, center, definition, hooks)
+				if not ok then warn("[RIFTBOUND NPC] Respawn failed:", err) end
+			end)
+		end
 	end)
 	runAI(model, humanoid, root, spawnPosition, definition, hooks)
+	return model
 end
 
 function NPCs.Start(hooks)
 	if started or not cfg or cfg.Enabled == false then return end
 	if cfg.StudioOnly and not RunService:IsStudio() then return end
 	started = true
+	activeHooks = hooks
 
 	local folder = Workspace:FindFirstChild("RIFTBOUND Enemies")
 	if not folder then
@@ -395,6 +404,21 @@ function NPCs.Start(hooks)
 		end)
 	end
 	print("[RIFTBOUND NPC] Starting " .. tostring(#TYPES) .. " world encounters across all three districts.")
+end
+
+-- DungeonService can spawn a one-shot encounter with the existing rig and
+-- combat AI. It never permits a client to supply spawn positions or damage.
+function NPCs.SpawnCustom(folder, position, definition)
+	if not activeHooks or not folder or not folder.Parent then return nil end
+	local d = table.clone(definition)
+	d.Offset = Vector3.zero
+	d.Id = d.Id or "Dungeon"
+	d.RecommendedLevel = d.RecommendedLevel or 25
+	d.Color = d.Color or Color3.fromRGB(186, 104, 239)
+	d.GuardChance = d.GuardChance or 0.3
+	d.Health = d.Health or 500
+	d.NoRespawn = true
+	return spawnOne(folder, position, d, activeHooks)
 end
 
 return NPCs
