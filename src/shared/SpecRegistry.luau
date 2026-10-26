@@ -12,6 +12,14 @@ return {
 			Ready = true,
 			StarterUnlocked = true, -- Prototype access; replace with progression unlocks later.
 		},
+		GreatSword = {
+			Id = "GreatSword",
+			Name = "Abyssal Covenant",
+			Subtitle = "Great Sword / heavy weapon combat",
+			Description = "Wield the Abyssal Covenant greatsword with real weapon combos, guard, lunge, launcher and devastating slam.",
+			Ready = true,
+			StarterUnlocked = true, -- Playable on the grass field while PvE grind is paused.
+		},
 		VoidDisciple = {
 			Id = "VoidDisciple",
 			Name = "Void Disciple",
@@ -23,5 +31,5 @@ return {
 			RequiredPermit = "RiftInitiate",
 		},
 	},
-	Order = {"AshleySimmons", "VoidDisciple"},
+	Order = {"AshleySimmons", "VoidDisciple", "GreatSword"},
 }
