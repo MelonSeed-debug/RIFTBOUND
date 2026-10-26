@@ -34,8 +34,25 @@ function Shield.Activate(player)
 	return true
 end
 
-function Shield.Damage(target, humanoid, amount)
+function Shield.Damage(target, humanoid, amount, attacker)
 	if not humanoid or humanoid.Health <= 0 or amount <= 0 then return 0 end
+	local time = workspace:GetServerTimeNow()
+	-- Shared server damage calculation for Spec status effects.
+	local attackerCharacter = attacker and attacker.Character
+	if attackerCharacter then
+		if (attackerCharacter:GetAttribute("Pill_AdrenalineRush") or 0) > os.clock() then
+			amount *= 1.20
+		end
+		if (attackerCharacter:GetAttribute("Pill_AntiInflammatory") or 0) > os.clock() then
+			amount *= 0.95
+		end
+		if (attackerCharacter:GetAttribute("FrenzyEuphoriaEnds") or 0) > time then
+			amount *= 0.90 -- Rough-draft weakening strength.
+		end
+	end
+	if (target:GetAttribute("Pill_AdrenalineRush") or 0) > os.clock() then
+		amount *= 1.10
+	end
 	-- Damage resistance is calculated on the server before shield absorption.
 	local resistanceEnds = target:GetAttribute("BuzzBoostEnds")
 	local resistance = target:GetAttribute("BuzzBoostResistance")
