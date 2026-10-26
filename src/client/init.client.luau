@@ -189,6 +189,7 @@ end
 loadOptionalUI("InventoryUI")
 loadOptionalUI("DialogueUI")
 loadOptionalUI("MasteryHUD")
+loadOptionalUI("VitalsHUD")
 
 -- Quest journal is optional: broken UI never disables attacks or Spec selection.
 local boardModule = script:FindFirstChild("QuestBoard") or script:WaitForChild("QuestBoard", 3)
