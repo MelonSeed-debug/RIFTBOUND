@@ -67,7 +67,15 @@ function Shield.Damage(target, humanoid, amount, attacker)
 		if hp - absorbed <= 0 then Shield.Clear(target) end
 		amount -= absorbed
 	end
-	if amount > 0 then humanoid:TakeDamage(amount) end
+	if amount > 0 then
+		-- Tag only real NPC health damage; shield-only hits earn no kill credit.
+		-- Set attributes BEFORE TakeDamage so Humanoid.Died can identify the killer.
+		if target:GetAttribute("RiftNPC") == true and attacker and attacker:IsA("Player") then
+			target:SetAttribute("RiftLastAttackerId", attacker.UserId)
+			target:SetAttribute("RiftLastHitAt", time)
+		end
+		humanoid:TakeDamage(amount)
+	end
 	return amount
 end
 
