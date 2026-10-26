@@ -4,6 +4,8 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local TweenService = game:GetService("TweenService")
 local Debris = game:GetService("Debris")
+local Lighting = game:GetService("Lighting")
+local RunService = game:GetService("RunService")
 local rift = ReplicatedStorage:WaitForChild("Riftbound")
 local request = rift.Remotes.CombatRequest
 local fx = rift.Remotes.CombatFX
@@ -67,19 +69,35 @@ ContextActionService:SetPosition("RiftHeavy",UDim2.new(1,-250,1,-230))
 ContextActionService:SetPosition("RiftBlock",UDim2.new(1,-200,1,-135))
 ContextActionService:SetPosition("RiftDash",UDim2.new(1,-145,1,-225))
 
+
+-- Ashley's remaining abilities: C, V and G, including gamepad and touch.
+local function bindSpecAction(name, action, key, gamepad, buttonTitle, touchPosition)
+	ContextActionService:BindAction(name, function(_, state)
+		if state == Enum.UserInputState.Begin and specRequest then
+			specRequest:FireServer(action)
+		end
+		return Enum.ContextActionResult.Sink
+	end, true, key, gamepad)
+	ContextActionService:SetTitle(name, buttonTitle)
+	ContextActionService:SetPosition(name, touchPosition)
+end
+bindSpecAction("RiftRaveRush", "RaveRush", Enum.KeyCode.C, Enum.KeyCode.DPadRight, "Rave", UDim2.new(1,-355,1,-315))
+bindSpecAction("RiftTrippyToss", "TrippyToss", Enum.KeyCode.V, Enum.KeyCode.ButtonL1, "Trippy", UDim2.new(1,-230,1,-320))
+bindSpecAction("RiftFrenzy", "Frenzy", Enum.KeyCode.G, Enum.KeyCode.ButtonY, "Frenzy", UDim2.new(1,-110,1,-320))
+
 local gui = Instance.new("ScreenGui")
 gui.Name = "RIFTBOUND Controls"
 gui.ResetOnSpawn = false
 gui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
 local label = Instance.new("TextLabel")
-label.Size = UDim2.fromOffset(390,45)
+label.Size = UDim2.fromOffset(450,45)
 label.Position = UDim2.new(0,15,1,-60)
 label.BackgroundTransparency = 0.4
 label.BackgroundColor3 = Color3.fromRGB(12,12,22)
 label.TextColor3 = Color3.fromRGB(255,255,255)
 label.Font = Enum.Font.GothamBold
 label.TextSize = 13
-label.Text = "RIFTBOUND  |  M1 Attack  •  R Heavy  •  F Parry/Block  •  Q Dash"
+label.Text = "RIFTBOUND  |  M1  R Heavy  F Block  Q Dash  Z X C V G Skills"
 label.Parent = gui
 
 
@@ -176,7 +194,9 @@ fx.OnClientEvent:Connect(function(effect, character, combo, damage)
 		shockwave(root, Color3.fromRGB(110, 190, 255), 4)
 		return
 	end
-	if effect == "Hit" and typeof(damage) == "number" then
+	if effect == "NauseaMiss" then
+		floatingText(root, "MISSED!", Color3.fromRGB(210, 180, 255))
+	elseif effect == "Hit" and typeof(damage) == "number" then
 		floatingText(root, "-" .. tostring(damage), Color3.fromRGB(255, 115, 115))
 		shockwave(root, Color3.fromRGB(255, 200, 120), combo == 5 and 6 or 3)
 	elseif effect == "BlockedHit" then
@@ -292,21 +312,140 @@ player:GetAttributeChangedSignal("PillAmmo"):Connect(refreshPills)
 player:GetAttributeChangedSignal("EquippedSpec"):Connect(refreshPills)
 refreshPills()
 
+
+-- Skill rows mirror server-owned cooldown and status attributes.
+local skillRows = {
+	{key = "C", name = "RAVE RUSH", attribute = "AshleyCReadyAt", active = "RaveRushEnds", y = -214, color = Color3.fromRGB(135, 255, 235)},
+	{key = "V", name = "TRIPPY TOSS", attribute = "AshleyVReadyAt", active = nil, y = -252, color = Color3.fromRGB(225, 165, 255)},
+	{key = "G", name = "FRENZY", attribute = "AshleyGReadyAt", active = nil, y = -290, color = Color3.fromRGB(255, 150, 195)},
+}
+for _, row in skillRows do
+	local control = Instance.new("TextLabel")
+	control.Name = row.name:gsub(" ", "") .. "Indicator"
+	control.Size = UDim2.fromOffset(245, 32)
+	control.Position = UDim2.new(0, 15, 1, row.y)
+	control.BackgroundColor3 = Color3.fromRGB(29, 25, 50)
+	control.BackgroundTransparency = 0.12
+	control.TextColor3 = row.color
+	control.Font = Enum.Font.GothamBold
+	control.TextSize = 16
+	control.Parent = gui
+	row.ui = control
+end
+local function updateAshleySkills()
+	local character = player.Character
+	local currentTime = workspace:GetServerTimeNow()
+	local hasAshley = player:GetAttribute("EquippedSpec") == "AshleySimmons"
+	for _, row in skillRows do
+		row.ui.Visible = hasAshley
+		local activeEnds = row.active and character and character:GetAttribute(row.active) or 0
+		local readyTime = player:GetAttribute(row.attribute) or 0
+		if activeEnds > currentTime then
+			row.ui.Text = row.key .. "  " .. row.name .. ": " .. math.ceil(activeEnds-currentTime) .. "s"
+		elseif readyTime > currentTime then
+			row.ui.Text = row.key .. "  COOLDOWN: " .. math.ceil(readyTime-currentTime) .. "s"
+		else
+			row.ui.Text = row.key .. "  " .. row.name .. " READY"
+		end
+	end
+end
+
+-- Local-only visual impairment and temporary PC movement inversion.
+local blur = Instance.new("BlurEffect")
+blur.Name = "RiftboundVisionBlur"
+blur.Size = 0
+blur.Parent = Lighting
+local grade = Instance.new("ColorCorrectionEffect")
+grade.Name = "RiftboundVisionGrade"
+grade.Parent = Lighting
+local inverted = false
+local pressed = {W=false,A=false,S=false,D=false}
+local function confusionInput(_, inputState, input)
+	local k = input.KeyCode.Name
+	if pressed[k] ~= nil then
+		pressed[k] = inputState == Enum.UserInputState.Begin
+	end
+	return Enum.ContextActionResult.Sink
+end
+local function setInverted(enabled)
+	if enabled == inverted then return end
+	inverted = enabled
+	if enabled then
+		ContextActionService:BindActionAtPriority("RiftConfusionMovement", confusionInput, false, 4000,
+			Enum.KeyCode.W, Enum.KeyCode.A, Enum.KeyCode.S, Enum.KeyCode.D)
+		RunService:BindToRenderStep("RiftConfusionMove", Enum.RenderPriority.Input.Value + 20, function()
+			local character = player.Character
+			local hum = character and character:FindFirstChildOfClass("Humanoid")
+			if hum and hum.Health > 0 then
+				local x = (pressed.A and 1 or 0) - (pressed.D and 1 or 0)
+				local z = (pressed.W and 1 or 0) - (pressed.S and 1 or 0)
+				local direction = Vector3.new(x,0,z)
+				hum:Move(direction.Magnitude > 1 and direction.Unit or direction, true)
+			end
+		end)
+	else
+		ContextActionService:UnbindAction("RiftConfusionMovement")
+		RunService:UnbindFromRenderStep("RiftConfusionMove")
+		for k in pressed do pressed[k] = false end
+	end
+end
+task.spawn(function()
+	while gui.Parent do
+		updateAshleySkills()
+		local character = player.Character
+		local currentTime = workspace:GetServerTimeNow()
+		local trippy = character and (character:GetAttribute("TrippyVisionEnds") or 0) > currentTime
+		local confused = character and (character:GetAttribute("FrenzyConfusionEnds") or 0) > currentTime
+		blur.Size = trippy and 18 or (confused and 8 or 0)
+		grade.Saturation = trippy and -0.65 or (confused and 0.65 or 0)
+		grade.TintColor = confused and Color3.fromRGB(250, 165, 255) or Color3.new(1,1,1)
+		setInverted(confused == true)
+		task.wait(0.12)
+	end
+	setInverted(false)
+	blur:Destroy()
+	grade:Destroy()
+end)
+
 if specFX then
 specFX.OnClientEvent:Connect(function(effect, target, status)
-	if effect ~= "PillImpact" or not target or not target:IsA("Model") then return end
+	if effect == "TrippyExplosion" or effect == "FrenzyExplosion" then
+		if typeof(target) ~= "Vector3" then return end
+		local marker = Instance.new("Part")
+		marker.Name = "AshleyImpactLabel"
+		marker.Size = Vector3.new(0.1,0.1,0.1)
+		marker.Anchored = true
+		marker.CanCollide = false
+		marker.CanQuery = false
+		marker.Transparency = 1
+		marker.Position = target
+		marker.Parent = workspace
+		floatingText(marker, effect == "TrippyExplosion" and "TRIPPY!" or tostring(status),
+			effect == "TrippyExplosion" and Color3.fromRGB(210, 135, 255) or Color3.fromRGB(255, 155, 195))
+		Debris:AddItem(marker, 0.8)
+		return
+	end
+	if not target or not target:IsA("Model") then return end
 	local root = target:FindFirstChild("HumanoidRootPart")
 	if not root then return end
+	if effect == "RaveRush" then
+		floatingText(root, "RAVE RUSH!", Color3.fromRGB(110, 245, 220))
+		return
+	elseif effect == "FrenzyCast" then
+		floatingText(root, "FRENZY!", Color3.fromRGB(255, 100, 195))
+		return
+	elseif effect ~= "PillImpact" then
+		return
+	end
 	local colors = {
-		ChillPill = Color3.fromRGB(100, 220, 255),
-		Euphoria = Color3.fromRGB(245, 100, 235),
-		AdrenalineRush = Color3.fromRGB(255, 160, 60),
-		AntiInflammatory = Color3.fromRGB(100, 255, 150),
-		MoodStabilizer = Color3.fromRGB(195, 155, 255),
+		ChillPill = Color3.fromRGB(100,220,255),
+		Euphoria = Color3.fromRGB(245,100,235),
+		AdrenalineRush = Color3.fromRGB(255,160,60),
+		AntiInflammatory = Color3.fromRGB(100,255,150),
+		MoodStabilizer = Color3.fromRGB(195,155,255),
 	}
 	local color = colors[status] or Color3.new(1,1,1)
 	floatingText(root, status, color)
 	shockwave(root, color, 4.5)
 end)
-
 end
