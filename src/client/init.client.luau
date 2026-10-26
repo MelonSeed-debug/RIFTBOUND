@@ -619,8 +619,10 @@ specFX.OnClientEvent:Connect(function(effect, target, status)
 		Debris:AddItem(marker, 0.8)
 		return
 	end
-	if effect == "SwordAbility" and target and target:IsA("Model") then
-		Motion.Play(target, "SwordAbility", status)
+	if (effect == "SwordAbility" or effect == "SwordGuardEnd")
+		and target and target:IsA("Model") then
+		Motion.Play(target, effect, status)
+		if effect == "SwordGuardEnd" then return end
 	end
 	if not target or not target:IsA("Model") then return end
 	local root = target:FindFirstChild("HumanoidRootPart")
