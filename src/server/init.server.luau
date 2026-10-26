@@ -212,7 +212,9 @@ local function m1(player)
 				touched[model] = true
 				local targetHum = model:FindFirstChildOfClass("Humanoid")
 				local targetRoot = model:FindFirstChild("HumanoidRootPart")
-				if targetHum and targetRoot and targetHum.Health > 0 then
+				if targetHum and targetRoot and targetHum.Health > 0
+					and not (Players:GetPlayerFromCharacter(model) and
+						(character:GetAttribute("RiftSafeZone") == true or model:GetAttribute("RiftSafeZone") == true)) then
 					local delta = targetRoot.Position - liveRoot.Position
 					if delta.Magnitude <= config.M1.Range + 3 and delta.Magnitude > 0.01 and liveRoot.CFrame.LookVector:Dot(delta.Unit) > 0.10 then
 						local defended = model:GetAttribute("RiftBlocking") == true and targetRoot.CFrame.LookVector:Dot((-delta).Unit) >= config.Block.FrontDot
@@ -272,7 +274,9 @@ local function heavy(player)
 				seen[target] = true
 				local hum = target:FindFirstChildOfClass("Humanoid")
 				local targetRoot = target:FindFirstChild("HumanoidRootPart")
-				if hum and targetRoot and hum.Health > 0 then
+				if hum and targetRoot and hum.Health > 0
+					and not (Players:GetPlayerFromCharacter(target) and
+						(character:GetAttribute("RiftSafeZone") == true or target:GetAttribute("RiftSafeZone") == true)) then
 					local offset = targetRoot.Position-currentRoot.Position
 					if offset.Magnitude > 0.01 and offset.Magnitude <= config.Heavy.Range+2 and currentRoot.CFrame.LookVector:Dot(offset.Unit) > 0.1 then
 						local guarded = target:GetAttribute("RiftBlocking") == true and targetRoot.CFrame.LookVector:Dot(-offset.Unit) >= config.Block.FrontDot
@@ -388,7 +392,11 @@ if game:GetService("RunService"):IsStudio() then
 	local root = Instance.new("Part")
 	root.Name = "HumanoidRootPart"
 	root.Size = Vector3.new(2,5,2)
-	root.Position = Vector3.new(0,4,-12)
+	local spawn = Workspace:FindFirstChildWhichIsA("SpawnLocation", true)
+		local location = spawn and spawn.Position or Vector3.new(0, 0, 0)
+		local worldFolder = Workspace:FindFirstChild("RIFTBOUND World")
+		local ground = worldFolder and worldFolder:GetAttribute("GroundY")
+		root.Position = Vector3.new(location.X, (typeof(ground) == "number" and ground + 2.5) or location.Y + 4, location.Z - 12)
 	root.Color = Color3.fromRGB(210,65,75)
 	root.Material = Enum.Material.Neon
 	root.Anchored = true
