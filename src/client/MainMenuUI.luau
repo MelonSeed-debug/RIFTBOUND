@@ -1,6 +1,5 @@
 --!strict
--- RIFTBOUND central M menu. Opens existing, fully functional panels rather
--- than creating second copies of the inventory, quests, specs or map.
+-- RIFTBOUND central M menu. Map/guide are paused during flat grass testing.
 -- All content is player-facing only; profile data remains server owned.
 local ContextActionService=game:GetService("ContextActionService")
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
@@ -13,8 +12,6 @@ local SECTIONS={
 	{title="SPECS",tagline="Equip your fighting style",kind="panel",target="SpecSelection",symbol="S"},
 	{title="QUESTS",tagline="Contracts and story missions",kind="panel",target="QuestJournal",symbol="Q"},
 	{title="INVENTORY",tagline="Gear, potions and materials",kind="panel",target="DecoInventory",symbol="I"},
-	{title="WORLD MAP",tagline="Explore four island districts",kind="panel",target="RiftboundWorldMap",symbol="W"},
-	{title="WORLD GUIDE",tagline="Zones and suggested levels",kind="panel",target="WorldGuide",symbol="G"},
 	{title="CHARACTER",tagline="Level, coins and dungeon clears",kind="detail",target="Character",symbol="C"},
 	{title="MASTERY",tagline="Skill XP and ability unlocks",kind="detail",target="Mastery",symbol="M"},
 	{title="DUNGEONS",tagline="Abyss Citadel and its rewards",kind="detail",target="Dungeons",symbol="D"},
@@ -37,14 +34,14 @@ function Menu.Init(player,gui)
 	panel.Name="RiftMainMenu"
 	panel.AnchorPoint=Vector2.new(0.5,0.5)
 	panel.Position=UDim2.fromScale(0.5,0.49)
-	panel.Size=UDim2.fromOffset(575,540)
+	panel.Size=UDim2.fromOffset(575,492)
 	panel.Visible=false
 	panel.Parent=gui
 	Deco.Panel(panel)
 	local widthLimit=Instance.new("UISizeConstraint")
 	widthLimit.Name="MenuSizeLimit"
 	widthLimit.MinSize=Vector2.new(300,390)
-	widthLimit.MaxSize=Vector2.new(575,540)
+	widthLimit.MaxSize=Vector2.new(575,492)
 	widthLimit.Parent=panel
 
 	local heading=Deco.Heading(Deco.Text(panel,"Title","RIFTBOUND",
@@ -92,8 +89,8 @@ function Menu.Init(player,gui)
 		cards[index]=tile
 	end
 	local footer=Deco.Text(panel,"Footnote",
-		"M  OPEN/CLOSE    •    I  INVENTORY    •    P  QUESTS    •    B  GUIDE    •    N  MAP",
-		UDim2.fromOffset(18,472),UDim2.new(1,-36,0,54),11,false)
+		"M  MENU    •    I  INVENTORY    •    P/J  QUESTS",
+		UDim2.fromOffset(18,432),UDim2.new(1,-36,0,42),11,false)
 	footer.TextXAlignment=Enum.TextXAlignment.Center
 	footer.TextColor3=Deco.Muted
 
@@ -102,7 +99,7 @@ function Menu.Init(player,gui)
 	local detail=Instance.new("Frame")
 	detail.Name="RiftMainMenuDetail"
 	detail.Position=UDim2.fromOffset(17,115)
-	detail.Size=UDim2.new(1,-34,0,346)
+	detail.Size=UDim2.new(1,-34,0,298)
 	detail.Visible=false
 	detail.Parent=panel
 	Deco.Panel(detail)
@@ -147,15 +144,15 @@ function Menu.Init(player,gui)
 		elseif detailPage=="Dungeons" then
 			detailTitle.Text="DUNGEONS / RAIDS"
 			details.Text="THE ABYSS CITADEL"
-				.."\nLocation: Rift Expanse"
+				.."\nLocation: Training Field portal"
 				.."\nRecommended: Level 25+"
 				.."\n\nBOSS  •  Abyss Warden"
 				.."\n1,650 HP with telegraphed area attacks"
 				.."\nBeware the enraged phase and Abyss Echo."
 				.."\n\nREWARDS"
 				.."\nRift Coins, XP, Abyss Sigils"
-				.."\n\nTravel to the Rift Expanse and interact with"
-				.."\nthe citadel gate to enter the dungeon."
+				.."\n\nFind the optional dungeon portal near"
+				.."\nthe edge of the training field."
 		end
 	end
 
@@ -199,7 +196,7 @@ function Menu.Init(player,gui)
 	panel:GetPropertyChangedSignal("Visible"):Connect(function()
 		if panel.Visible then
 			detail.Visible=false
-			footer.Text="M  OPEN/CLOSE    •    I  INVENTORY    •    P  QUESTS    •    B  GUIDE    •    N  MAP"
+			footer.Text="M  MENU    •    I  INVENTORY    •    P/J  QUESTS"
 			refreshSummary()
 		end
 	end)
