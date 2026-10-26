@@ -182,10 +182,15 @@ function InventoryUI.Init(player,gui)
 	for mode,b in menu do
 		b.Activated:Connect(function()selectMode(mode)end)
 	end
+	-- Opening from MENU [M] must render too, not just the I-key toggle.
+	panel:GetPropertyChangedSignal("Visible"):Connect(function()
+		if panel.Visible then
+			currentMode="Inventory"
+			render()
+		end
+	end)
 	local function toggle()
-		if not panel.Visible then currentMode="Inventory" end
 		panel.Visible=not panel.Visible
-		if panel.Visible then render() end
 	end
 	open.Activated:Connect(toggle)
 	ContextActionService:BindAction("RiftInventoryOpen",function(_,state)
