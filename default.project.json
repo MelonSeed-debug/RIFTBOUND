@@ -22,6 +22,9 @@
           },
           "SpecFX": {
             "$className": "RemoteEvent"
+          },
+          "ProgressionFX": {
+            "$className": "RemoteEvent"
           }
         }
       }
