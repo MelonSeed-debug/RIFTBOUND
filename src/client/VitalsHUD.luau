@@ -44,7 +44,8 @@ function HUD.Init(player,gui)
 	local panel=Instance.new("Frame")
 	panel.Name="ArtDecoVitals"
 	panel.Size=UDim2.fromOffset(325,145)
-	panel.Position=UDim2.new(0,15,1,-238)
+	-- Keep vitals below the mastery card and well above the bottom control hints.
+	panel.Position=UDim2.new(0,15,1,-176)
 	panel.Parent=gui
 	Deco.Panel(panel)
 	local header=Deco.Text(panel,"Title","RIFTBOUND  /  VITAL STATUS",
@@ -67,14 +68,18 @@ function HUD.Init(player,gui)
 		local expires=char and char:GetAttribute("PillShieldEnds") or 0
 		local spec=player:GetAttribute("EquippedSpec") or "None"
 		local mastery=player:GetAttribute("SpecMastery_"..spec) or 0
+		local masteryLevel,masteryWithin,masteryRequired=Mastery.LevelDetails(mastery)
 		hpLabel.Text="HEALTH   "..math.ceil(hp).." / "..math.floor(maxHP)
 		local maxShield=spec=="VoidDisciple" and 100 or 150
 		shieldLabel.Text="SHIELD   "..math.floor(shield).." / "..maxShield
 		if expires<=workspace:GetServerTimeNow() then shield=0 end
-		masteryLabel.Text="MASTERY   "..mastery.." / "..Mastery.MaxMastery
+		masteryLabel.Text=masteryLevel>=Mastery.MaxLevel
+			and "MASTERY   MAX LEVEL"
+			or ("MASTERY LV "..masteryLevel.."   "..masteryWithin.." / "..masteryRequired.." XP")
 		hpFill.Size=UDim2.fromScale(math.clamp(hp/math.max(1,maxHP),0,1),1)
 		shieldFill.Size=UDim2.fromScale(math.clamp(shield/maxShield,0,1),1)
-		masteryFill.Size=UDim2.fromScale(math.clamp(mastery/Mastery.MaxMastery,0,1),1)
+		masteryFill.Size=UDim2.fromScale(masteryRequired==0 and 1
+			or math.clamp(masteryWithin/masteryRequired,0,1),1)
 	end
 	local function bindCharacter(char)
 		clearHealth()
