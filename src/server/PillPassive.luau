@@ -32,6 +32,8 @@ end
 
 function Passive.OnHit(player, target)
 	if player:GetAttribute("EquippedSpec") ~= "AshleySimmons" then return end
+	-- A player protected by Haven cannot be afflicted by offensive pills.
+	if target:GetAttribute("RiftSafeZone") == true then return end
 	local humanoid = target:FindFirstChildOfClass("Humanoid")
 	local root = target:FindFirstChild("HumanoidRootPart")
 	if not humanoid or humanoid.Health <= 0 or not root then return end
