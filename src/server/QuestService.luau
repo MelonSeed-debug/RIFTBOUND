@@ -91,12 +91,16 @@ function QuestService.Start()
 		Color3.fromRGB(109, 188, 242), function(player)
 			fx:FireClient(player, "OpenJournal", "")
 		end)
-	makeStation("Void Trial Altar", "Start Void Trial", World.QuestStations.VoidTrial,
-		Color3.fromRGB(171, 79, 239), function(player)
-			local success, msg = Progression.AcceptQuest(player, "VoidTrial")
-			fx:FireClient(player, "OpenJournal", "")
-			fx:FireClient(player, success == true, msg)
-		end)
+	-- Void Trial's roaming boss and altar are paused in flat-field mode.
+	-- Keeping them out of the world avoids a dead-end quest interaction.
+	if not World.PracticeMode then
+		makeStation("Void Trial Altar", "Start Void Trial", World.QuestStations.VoidTrial,
+			Color3.fromRGB(171, 79, 239), function(player)
+				local success, msg = Progression.AcceptQuest(player, "VoidTrial")
+				fx:FireClient(player, "OpenJournal", "")
+				fx:FireClient(player, success == true, msg)
+			end)
+	end
 	request.OnServerEvent:Connect(function(player, action, questId)
 		if typeof(action) ~= "string" or #action > 20 then return end
 		local now = os.clock()
