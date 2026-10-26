@@ -170,6 +170,26 @@ if worldMapModule and worldMapModule:IsA("ModuleScript") then
 	end
 end
 
+-- Inventory, story dialogue and mastery panels use the provided Art Deco palette.
+-- Each is optional: a UI error cannot disable combat.
+local function loadOptionalUI(moduleName)
+	local mod=script:FindFirstChild(moduleName) or script:WaitForChild(moduleName,3)
+	if not mod or not mod:IsA("ModuleScript") then
+		warn("[RIFTBOUND UI] Module missing:",moduleName)
+		return
+	end
+	local loaded,ui=pcall(require,mod)
+	if not loaded or type(ui)~="table" or type(ui.Init)~="function" then
+		warn("[RIFTBOUND UI] Could not load:",moduleName,ui)
+		return
+	end
+	local worked,err=pcall(ui.Init,Players.LocalPlayer,gui)
+	if not worked then warn("[RIFTBOUND UI] Could not initialize:",moduleName,err) end
+end
+loadOptionalUI("InventoryUI")
+loadOptionalUI("DialogueUI")
+loadOptionalUI("MasteryHUD")
+
 -- Quest journal is optional: broken UI never disables attacks or Spec selection.
 local boardModule = script:FindFirstChild("QuestBoard") or script:WaitForChild("QuestBoard", 3)
 if boardModule and boardModule:IsA("ModuleScript") then
