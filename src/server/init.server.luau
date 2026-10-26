@@ -8,6 +8,13 @@ local rift = ReplicatedStorage:WaitForChild("Riftbound")
 local config = require(rift.Shared.CombatConfig)
 local worldCfg = require(rift.Shared.WorldConfig)
 local masteryCfg = require(rift.Shared.MasteryConfig)
+-- Sword tuning stays optional: a missing new file cannot break legacy combat.
+local swordSpec = {Passive = {}}
+local swordSpecModule = rift.Shared:FindFirstChild("GreatSwordSpec")
+if swordSpecModule then
+	local ok, result = pcall(require, swordSpecModule)
+	if ok and type(result) == "table" then swordSpec = result end
+end
 local masteryRemote = rift.Remotes:FindFirstChild("MasteryFX")
 
 -- Generate the Studio world synchronously BEFORE quests and NPCs spawn.
@@ -84,6 +91,26 @@ if voidModule then
 	if ok and type(loaded) == "table" then Void = loaded
 	else warn("[RIFTBOUND] Void Disciple unavailable:", loaded) end
 end
+-- Optional Sword move module (including model equipment). No errors here
+-- should disable the two original Specs or the core combat system.
+local Sword = {
+	Cast = function() return false end,
+	Start = function() end,
+	Refresh = function() end,
+	StopPlayerBuffs = function() end,
+	ClearCharacter = function() end,
+	ResetPlayer = function() end,
+}
+local swordModule = script:FindFirstChild("GreatSwordMoves")
+if swordModule then
+	local ok, result = pcall(require, swordModule)
+	if ok and type(result) == "table" then
+		Sword = result
+	else
+		warn("[RIFTBOUND] Great Sword module failed; legacy Specs still work:", result)
+	end
+end
+
 -- Optional registry-driven selection: failure must not disable combat or the dummy.
 local Selection = {Initialize = function(player) player:SetAttribute("EquippedSpec", "None") end, Request = function() return false end, Remove = function() end}
 local selectionModule = script:FindFirstChild("SpecSelection") or script:WaitForChild("SpecSelection", 3)
@@ -150,7 +177,9 @@ if specRequest then
 					Buzz.Clear(character)
 					if AshleyMoves.StopPlayerBuffs then AshleyMoves.StopPlayerBuffs(player) end
 					Void.StopPlayerBuffs(player)
+					Sword.StopPlayerBuffs(player)
 				end
+				Sword.Refresh(player)
 			end
 			return
 		end
@@ -178,7 +207,12 @@ if specRequest then
 		elseif action == "VoidStep" then castSucceeded=Void.Cast(player, "X")
 		elseif action == "VoidGrasp" then castSucceeded=Void.Cast(player, "C")
 		elseif action == "VoidCleave" then castSucceeded=Void.Cast(player, "V")
-		elseif action == "VoidNova" then castSucceeded=Void.Cast(player, "G") end
+		elseif action == "VoidNova" then castSucceeded=Void.Cast(player, "G")
+		elseif action == "SwordGuard" then castSucceeded=Sword.Cast(player, "Z")
+		elseif action == "SwordLunge" then castSucceeded=Sword.Cast(player, "X")
+		elseif action == "SwordUplift" then castSucceeded=Sword.Cast(player, "C")
+		elseif action == "SwordSlam" then castSucceeded=Sword.Cast(player, "V")
+		elseif action == "SwordExecution" then castSucceeded=Sword.Cast(player, "G") end
 		if castSucceeded == true and Progression.AwardSkillUse then
 			Progression.AwardSkillUse(player,skill.Spec,skill.Key)
 		end
@@ -225,11 +259,15 @@ local function m1(player)
 	local now = os.clock()
 	if now < s.nextM1 then return end
 	if now - s.lastHit > config.M1.ComboResetTime then s.combo = 0 end
+	local sword = player:GetAttribute("EquippedSpec") == "GreatSword" and swordSpec.Passive or nil
 	s.combo = s.combo % #config.M1.Damages + 1
 	s.lastHit = now
 	local combo = s.combo
 	local slowAttack = (character:GetAttribute("Pill_MoodStabilizer") or 0) > os.clock()
-	s.nextM1 = now + (combo == 4 and config.M1.FinisherCooldown or config.M1.HitCooldown) * (slowAttack and (1 / 0.97) or 1)
+	s.nextM1 = now + (combo == 4
+		and (sword and sword.M1FinisherCooldown or config.M1.FinisherCooldown)
+		or (sword and sword.M1HitCooldown or config.M1.HitCooldown))
+		* (slowAttack and (1 / 0.97) or 1)
 	s.attacking = true
 	fx:FireAllClients("Swing", character, combo)
 	if character:GetAttribute("FrenzyNausea") == true then
@@ -242,8 +280,10 @@ local function m1(player)
 	task.delay(0.12, function()
 		local liveChar, _, liveRoot = alive(player)
 		if liveChar ~= character or not liveRoot then return end
-		local box = liveRoot.CFrame * CFrame.new(0,0,-config.M1.Range / 2)
-		local size = Vector3.new(config.M1.Width,config.M1.Height,config.M1.Range)
+		local range = sword and sword.M1Range or config.M1.Range
+		local width = sword and sword.M1Width or config.M1.Width
+		local size = Vector3.new(width, config.M1.Height, range)
+		local box = liveRoot.CFrame * CFrame.new(0,0,-range / 2)
 		local params = OverlapParams.new()
 		params.FilterType = Enum.RaycastFilterType.Exclude
 		params.FilterDescendantsInstances = {character}
@@ -258,7 +298,7 @@ local function m1(player)
 					and not (Players:GetPlayerFromCharacter(model) and
 						(character:GetAttribute("RiftSafeZone") == true or model:GetAttribute("RiftSafeZone") == true)) then
 					local delta = targetRoot.Position - liveRoot.Position
-					if delta.Magnitude <= config.M1.Range + 3 and delta.Magnitude > 0.01 and liveRoot.CFrame.LookVector:Dot(delta.Unit) > 0.10 then
+					if delta.Magnitude <= range + 3 and delta.Magnitude > 0.01 and liveRoot.CFrame.LookVector:Dot(delta.Unit) > 0.10 then
 						local defended = model:GetAttribute("RiftBlocking") == true and targetRoot.CFrame.LookVector:Dot((-delta).Unit) >= config.Block.FrontDot
 						if defended then
 							local defender = Players:GetPlayerFromCharacter(model)
@@ -270,13 +310,13 @@ local function m1(player)
 								fx:FireAllClients("BlockedHit",model,combo)
 							end
 						else
-							Shield.Damage(model, targetHum, config.M1.Damages[combo], player)
+							Shield.Damage(model, targetHum, sword and sword.M1Damage[combo] or config.M1.Damages[combo], player)
 							PillPassive.OnHit(player, model)
 							Void.OnHit(player, model)
 							if combo == 4 and not targetRoot.Anchored then
 								targetRoot.AssemblyLinearVelocity = liveRoot.CFrame.LookVector * config.M1.FinisherKnockback + Vector3.new(0,12,0)
 							end
-							fx:FireAllClients("Hit",model,combo,config.M1.Damages[combo])
+							fx:FireAllClients("Hit",model,combo,sword and sword.M1Damage[combo] or config.M1.Damages[combo])
 						end
 					end
 				end
@@ -293,7 +333,9 @@ local function heavy(player)
 	local now = os.clock()
 	if now < s.nextHeavy then return end
 	local slowAttack = (character:GetAttribute("Pill_MoodStabilizer") or 0) > os.clock()
-	s.nextHeavy = now + config.Heavy.Cooldown * (slowAttack and (1 / 0.97) or 1)
+	local sword = player:GetAttribute("EquippedSpec") == "GreatSword" and swordSpec.Passive or nil
+	s.nextHeavy = now + (sword and sword.HeavyCooldown or config.Heavy.Cooldown)
+		* (slowAttack and (1 / 0.97) or 1)
 	s.attacking = true
 	fx:FireAllClients("HeavySwing",character)
 	if character:GetAttribute("FrenzyNausea") == true then
@@ -309,8 +351,10 @@ local function heavy(player)
 		params.FilterType = Enum.RaycastFilterType.Exclude
 		params.FilterDescendantsInstances = {character}
 		local seen = {}
-		local box = currentRoot.CFrame * CFrame.new(0,0,-config.Heavy.Range/2)
-		for _, part in Workspace:GetPartBoundsInBox(box,Vector3.new(config.Heavy.Width,config.Heavy.Height,config.Heavy.Range),params) do
+		local range = sword and sword.HeavyRange or config.Heavy.Range
+		local width = sword and sword.HeavyWidth or config.Heavy.Width
+		local box = currentRoot.CFrame * CFrame.new(0,0,-range/2)
+		for _, part in Workspace:GetPartBoundsInBox(box,Vector3.new(width,config.Heavy.Height,range),params) do
 			local target = part:FindFirstAncestorOfClass("Model")
 			if target and not seen[target] then
 				seen[target] = true
@@ -320,7 +364,7 @@ local function heavy(player)
 					and not (Players:GetPlayerFromCharacter(target) and
 						(character:GetAttribute("RiftSafeZone") == true or target:GetAttribute("RiftSafeZone") == true)) then
 					local offset = targetRoot.Position-currentRoot.Position
-					if offset.Magnitude > 0.01 and offset.Magnitude <= config.Heavy.Range+2 and currentRoot.CFrame.LookVector:Dot(offset.Unit) > 0.1 then
+					if offset.Magnitude > 0.01 and offset.Magnitude <= range+2 and currentRoot.CFrame.LookVector:Dot(offset.Unit) > 0.1 then
 						local guarded = target:GetAttribute("RiftBlocking") == true and targetRoot.CFrame.LookVector:Dot(-offset.Unit) >= config.Block.FrontDot
 						local defender = Players:GetPlayerFromCharacter(target)
 						local ds = defender and getState(defender)
@@ -344,11 +388,11 @@ local function heavy(player)
 								end
 								fx:FireAllClients("GuardBreak",target)
 							else
-								Shield.Damage(target, hum, config.Heavy.Damage, player)
+								Shield.Damage(target, hum, sword and sword.HeavyDamage or config.Heavy.Damage, player)
 								PillPassive.OnHit(player, target)
 								Void.OnHit(player, target)
 								if not targetRoot.Anchored then targetRoot.AssemblyLinearVelocity=currentRoot.CFrame.LookVector*config.Heavy.Knockback end
-								fx:FireAllClients("Hit",target,5,config.Heavy.Damage)
+								fx:FireAllClients("Hit",target,5,sword and sword.HeavyDamage or config.Heavy.Damage)
 							end
 						end
 					end
@@ -413,6 +457,7 @@ local function setup(player)
 	Buzz.ResetPlayer(player)
 	AshleyMoves.ResetPlayer(player)
 	Void.ResetPlayer(player)
+	Sword.ResetPlayer(player)
 	player.CharacterAdded:Connect(function(character)
 		local s = getState(player)
 		s.combo,s.lastHit,s.nextM1,s.nextDash = 0,0,0,0
@@ -423,12 +468,16 @@ local function setup(player)
 		Buzz.Clear(character)
 		AshleyMoves.ClearCharacter(character)
 		Void.ClearCharacter(character)
+		Sword.ClearCharacter(character)
 		PillPassive.Reset(player)
 	end)
 	if player.Character then player.Character:SetAttribute("RiftBlocking",false) end
 end
 Players.PlayerAdded:Connect(setup)
 for _,player in Players:GetPlayers() do setup(player) end
+-- Attach the imported sword whenever GreatSword is equipped or a character respawns.
+local startedSword, swordError = pcall(Sword.Start)
+if not startedSword then warn("[RIFTBOUND Sword] Equip watcher unavailable:", swordError) end
 Players.PlayerRemoving:Connect(function(player)
 	states[player] = nil
 	Selection.Remove(player)
