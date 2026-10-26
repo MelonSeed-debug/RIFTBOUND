@@ -2,7 +2,7 @@
 -- RIFTBOUND quest board v0.1. Quest IDs never depend on display names.
 -- "Any" means any NPC with a reward entry in LevelConfig.Rewards.
 return {
-	Order = {"FirstSteps", "ShieldWall", "StreetPatrol", "RiftInitiation"},
+	Order = {"FirstSteps", "ShieldWall", "StreetPatrol", "RiftInitiation", "VoidTrial"},
 	Quests = {
 		FirstSteps = {
 			Name = "First Steps", Description = "Clear two Street Brawlers.",
@@ -24,6 +24,14 @@ return {
 			RequiredLevel = 10, Target = "Any", Count = 8,
 			XP = 650, Coins = 220, Repeatable = false,
 			Permit = "RiftInitiate",
+		},
+		VoidTrial = {
+			Name = "Trial of the Void",
+			Description = "Defeat the Rift Sentinel to unlock Void Disciple.",
+			RequiredLevel = 10, RequiredPermit = "RiftInitiate",
+			Target = "Rift Sentinel", Count = 1,
+			XP = 850, Coins = 275, Repeatable = false,
+			UnlockSpec = "VoidDisciple",
 		},
 	},
 }
