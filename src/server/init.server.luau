@@ -6,6 +6,7 @@ local Workspace = game:GetService("Workspace")
 
 local rift = ReplicatedStorage:WaitForChild("Riftbound")
 local config = require(rift.Shared.CombatConfig)
+local worldCfg = require(rift.Shared.WorldConfig)
 
 -- Generate the Studio world synchronously BEFORE quests and NPCs spawn.
 -- The map is optional and a failure never interrupts combat.
@@ -396,7 +397,10 @@ if game:GetService("RunService"):IsStudio() then
 		local location = spawn and spawn.Position or Vector3.new(0, 0, 0)
 		local worldFolder = Workspace:FindFirstChild("RIFTBOUND World")
 		local ground = worldFolder and worldFolder:GetAttribute("GroundY")
-		root.Position = Vector3.new(location.X, (typeof(ground) == "number" and ground + 2.5) or location.Y + 4, location.Z - 12)
+		local offset = worldCfg.TrainingDummy or Vector3.new(0, 0, -12)
+		root.Position = Vector3.new(location.X + offset.X,
+			(typeof(ground) == "number" and ground + 4) or location.Y + 4,
+			location.Z + offset.Z)
 	root.Color = Color3.fromRGB(210,65,75)
 	root.Material = Enum.Material.Neon
 	root.Anchored = true
