@@ -305,6 +305,8 @@ function Sword.StopPlayerBuffs(player)
 	if character then
 		character:SetAttribute("RiftDefenseBuffEnds", 0)
 		character:SetAttribute("RiftDefenseBuffMultiplier", 1)
+		-- Switching Specs also stops a lingering sword guard stance.
+		fx:FireAllClients("SwordGuardEnd", character)
 	end
 end
 
