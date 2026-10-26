@@ -321,7 +321,8 @@ local function spawnOne(folder, center, definition, hooks)
 	end
 
 	local pos = center + definition.Offset
-	local y = floorPosition(pos.X, pos.Z, center.Y, folder)
+	local y = definition.Id == "Dungeon" and center.Y
+		or floorPosition(pos.X, pos.Z, center.Y, folder)
 	local spawnPosition = Vector3.new(pos.X, y + math.max(humanoid.HipHeight + root.Size.Y / 2, 3), pos.Z)
 	model.Name = definition.Name
 	model:SetAttribute("RiftNPC", true)
