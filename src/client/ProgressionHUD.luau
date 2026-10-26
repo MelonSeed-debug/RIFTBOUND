@@ -5,6 +5,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local TweenService = game:GetService("TweenService")
 
 local config = require(ReplicatedStorage.Riftbound.Shared.LevelConfig)
+local Deco = require(script.Parent.ArtDecoUI)
 local HUD = {}
 
 local function corner(object, radius)
@@ -38,17 +39,18 @@ function HUD.Init(player, gui)
 	panel.BackgroundTransparency = 0.06
 	panel.BorderSizePixel = 0
 	panel.Parent = gui
-	corner(panel, 12)
+	corner(panel, 5)
+	Deco.Panel(panel)
 
 	local outline = Instance.new("UIStroke")
-	outline.Color = Color3.fromRGB(122, 86, 176)
+	outline.Color = Deco.Gold
 	outline.Thickness = 1.4
 	outline.Parent = panel
 
 	local title = text(panel, UDim2.fromOffset(290, 27), UDim2.fromOffset(13, 9),
-		"RIFTBOUND  /  PROGRESSION", 14, Color3.fromRGB(208, 159, 255), true)
+		"RIFTBOUND  /  PROGRESSION", 14, Deco.PaleGold, true)
 	local levelText = text(panel, UDim2.fromOffset(290, 28), UDim2.fromOffset(13, 35),
-		"LEVEL 1 / 50", 20, Color3.fromRGB(250, 246, 255), true)
+		"LEVEL 1 / 50", 20, Deco.Paper, true)
 
 	local track = Instance.new("Frame")
 	track.Name = "XPTrack"
@@ -66,14 +68,15 @@ function HUD.Init(player, gui)
 	fill.BorderSizePixel = 0
 	fill.Size = UDim2.fromScale(0, 1)
 	fill.Parent = track
-	corner(fill, 6)
+	corner(fill, 4)
+	Deco.Progress(track,fill)
 
 	local progressText = text(panel, UDim2.fromOffset(288, 20), UDim2.fromOffset(13, 83),
-		"0 / 75 XP", 13, Color3.fromRGB(198, 195, 215), false)
+		"0 / 75 XP", 13, Deco.Muted, false)
 	local coinsText = text(panel, UDim2.fromOffset(175, 19), UDim2.fromOffset(13, 105),
-		"Rift Coins: 0", 12, Color3.fromRGB(255, 222, 123), true)
+		"Rift Coins: 0", 12, Deco.PaleGold, true)
 	local killsText = text(panel, UDim2.fromOffset(120, 19), UDim2.fromOffset(190, 105),
-		"Defeats: 0", 12, Color3.fromRGB(150, 227, 236), false)
+		"Defeats: 0", 12, Deco.Paper, false)
 
 	local rewardText = text(gui, UDim2.fromOffset(390, 42), UDim2.new(0.5, -195, 0, 160),
 		"", 21, Color3.fromRGB(255, 232, 139), true)
@@ -126,8 +129,8 @@ function HUD.Init(player, gui)
 			rewardText.Text = (effect == "QuestReward" and "QUEST COMPLETE!  " or "") .. "+" .. tostring(xp) .. " XP  •  +" .. tostring(coins)
 				.. " Rift Coins" .. (levelsGained > 0 and ("  •  LEVEL UP +" .. tostring(levelsGained)) or "")
 			rewardText.TextColor3 = levelsGained > 0
-				and Color3.fromRGB(255, 226, 119)
-				or Color3.fromRGB(213, 161, 245)
+				and Deco.PaleGold
+				or Deco.Gold
 			rewardText.TextTransparency = 0
 			rewardText.TextStrokeTransparency = 0.38
 			task.delay(2.6, function()
