@@ -333,6 +333,18 @@ local function spawnOne(folder, center, definition, hooks)
 		if respawnQueued then return end
 		respawnQueued = true
 		model:SetAttribute("RiftBlocking", false)
+		-- NPC defeats reward only the last server-validated player who damaged
+		-- this particular enemy, within 12 seconds of its death.
+		local userId = model:GetAttribute("RiftLastAttackerId")
+		local hitTime = model:GetAttribute("RiftLastHitAt")
+		if typeof(userId) == "number" and typeof(hitTime) == "number"
+			and Workspace:GetServerTimeNow() - hitTime <= 12 then
+			local killer = Players:GetPlayerByUserId(userId)
+			if killer and hooks.AwardDefeat then
+				local paid, err = pcall(hooks.AwardDefeat, killer, definition.Name)
+				if not paid then warn("[RIFTBOUND NPC] Failed to award defeat:", err) end
+			end
+		end
 		task.delay(3, function()
 			if model.Parent then model:Destroy() end
 		end)
