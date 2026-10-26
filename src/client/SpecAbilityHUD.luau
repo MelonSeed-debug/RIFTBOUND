@@ -1,7 +1,7 @@
 --!strict
 -- RIFTBOUND right-edge move list inspired by the player's reference screenshot:
 -- warm orange mastery heading, white move names, violet mastery requirements,
--- black/grey keycaps, and a slim XP bar. NO friends-boost section.
+-- black/grey keycaps, and a slim mastery XP bar.
 -- Display only: Z/X/C/V/G still go through existing server-authorized inputs.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Workspace = game:GetService("Workspace")
@@ -238,7 +238,7 @@ function HUD.Init(player, gui)
 		end
 	end)
 	refresh()
-	print("[RIFTBOUND UI] Right-side skill list active. No Friends Boost.")
+	print("[RIFTBOUND UI] Right-side skill list active for both Specs.")
 end
 
 return HUD
