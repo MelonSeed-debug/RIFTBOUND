@@ -139,15 +139,16 @@ if hudModule and hudModule:IsA("ModuleScript") then
 	end
 end
 
--- Optional Void cooldowns: missing module must never block combat.
-local voidHUDModule = script:FindFirstChild("VoidDiscipleHUD") or script:WaitForChild("VoidDiscipleHUD", 3)
-if voidHUDModule and voidHUDModule:IsA("ModuleScript") then
-	local ok, hud = pcall(require, voidHUDModule)
-	if ok and type(hud) == "table" and type(hud.Init) == "function" then
-		local loaded, err = pcall(hud.Init, Players.LocalPlayer, gui)
-		if not loaded then warn("[RIFTBOUND] Void HUD could not initialize:", err) end
+-- Screenshot-inspired right-side move list for BOTH Specs. Replaces the old
+-- centered Void ability dock; missing HUD never interrupts combat controls.
+local abilitiesModule = script:FindFirstChild("SpecAbilityHUD") or script:WaitForChild("SpecAbilityHUD", 3)
+if abilitiesModule and abilitiesModule:IsA("ModuleScript") then
+	local ok, abilityHUD = pcall(require, abilitiesModule)
+	if ok and type(abilityHUD) == "table" and type(abilityHUD.Init) == "function" then
+		local created, err = pcall(abilityHUD.Init, Players.LocalPlayer, gui)
+		if not created then warn("[RIFTBOUND] Ability HUD could not initialize:", err) end
 	else
-		warn("[RIFTBOUND] Void HUD unavailable:", hud)
+		warn("[RIFTBOUND] Ability HUD unavailable:", abilityHUD)
 	end
 end
 
