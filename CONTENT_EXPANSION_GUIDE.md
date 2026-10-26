@@ -26,7 +26,7 @@ If you've already baked the island world (Workspace / RIFTBOUND World), keep it;
 | Z X C V G | Equipped Spec abilities; C/V/G have mastery thresholds |
 | E near a named NPC | Dialogue or dungeon entrance |
 
-Black-and-gold panels are styled with an Art Deco theme inspired by the provided image: dark gradients, thin gold borders, corner diamonds and gilded controls. The exact reference texture does **not** render as a Roblox image yet because it needs a valid uploaded Roblox ImageId. This implementation uses native UI primitives instead.
+Black-and-gold panels are styled with an Art Deco theme inspired by the provided image: dark gradients, thin gold borders, corner diamonds and gilded controls. A **three-bar combat HUD** uses red health, blue active shielding, and green equipped-Spec mastery. The exact reference texture does **not** render as a Roblox image yet because it needs a valid uploaded Roblox ImageId. This implementation uses native UI primitives instead.
 
 ## Shops and inventory (server-validated)
 
