@@ -68,6 +68,10 @@ task.spawn(function()
 	local ok, loaded = pcall(require, module)
 	if ok and type(loaded) == "table" and type(loaded.Play) == "function" then
 		Motion = loaded
+		if type(Motion.BindLocalPlayer) == "function" then
+			local bindOK, bindErr = pcall(Motion.BindLocalPlayer, localPlayer)
+			if not bindOK then warn("[RIFTBOUND] Sword movement animations unavailable:",bindErr) end
+		end
 		print("[RIFTBOUND] Animation layer ready; HUD startup remains independent.")
 	else
 		warn("[RIFTBOUND] CombatAnimations failed, HUD continues:", loaded)
