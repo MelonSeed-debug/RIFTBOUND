@@ -27,7 +27,7 @@ return {
 		},
 		GildedBroker = {
 			Name="GILDED BROKER",Role="Gear merchant of Haven",District="Haven",
-			Position=Vector3.new(-66,0,-6),Color=Color3.fromRGB(241,203,92),
+			Position=Vector3.new(-59,0,-6),Color=Color3.fromRGB(241,203,92),
 			Lines={
 				"A proper set of gear changes a fight before the first punch.",
 				"Get your Iron Grips here. When you're experienced enough, the Gilded Crest is worth every Rift Coin.",
