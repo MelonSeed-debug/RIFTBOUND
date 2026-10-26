@@ -68,11 +68,12 @@ function HUD.Init(player,gui)
 		local spec=player:GetAttribute("EquippedSpec") or "None"
 		local mastery=player:GetAttribute("SpecMastery_"..spec) or 0
 		hpLabel.Text="HEALTH   "..math.ceil(hp).." / "..math.floor(maxHP)
-		shieldLabel.Text="SHIELD   "..math.floor(shield).." / 150"
+		local maxShield=spec=="VoidDisciple" and 100 or 150
+		shieldLabel.Text="SHIELD   "..math.floor(shield).." / "..maxShield
 		if expires<=workspace:GetServerTimeNow() then shield=0 end
 		masteryLabel.Text="MASTERY   "..mastery.." / "..Mastery.MaxMastery
 		hpFill.Size=UDim2.fromScale(math.clamp(hp/math.max(1,maxHP),0,1),1)
-		shieldFill.Size=UDim2.fromScale(math.clamp(shield/150,0,1),1)
+		shieldFill.Size=UDim2.fromScale(math.clamp(shield/maxShield,0,1),1)
 		masteryFill.Size=UDim2.fromScale(math.clamp(mastery/Mastery.MaxMastery,0,1),1)
 	end
 	local function bindCharacter(char)
