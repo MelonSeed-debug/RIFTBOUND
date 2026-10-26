@@ -100,6 +100,20 @@ label.TextSize = 13
 label.Text = "RIFTBOUND  |  M1  R Heavy  F Block  Q Dash  Z X C V G Skills"
 label.Parent = gui
 
+-- The Spec menu is an optional UI module: combat input still loads without it.
+local specMenuModule = script:FindFirstChild("SpecMenu") or script:WaitForChild("SpecMenu", 3)
+if specMenuModule and specRequest then
+	local ok, menu = pcall(require, specMenuModule)
+	if ok and type(menu) == "table" and type(menu.Init) == "function" then
+		local built, err = pcall(menu.Init, Players.LocalPlayer, specRequest, gui)
+		if not built then warn("[RIFTBOUND] Spec menu failed:", err) end
+	else
+		warn("[RIFTBOUND] SpecMenu could not load:", menu)
+	end
+else
+	warn("[RIFTBOUND] Spec menu unavailable; combat controls still active.")
+end
+
 
 -- Phase 1 combat feedback. Visuals are cosmetic and never determine damage.
 local comboLabel = Instance.new("TextLabel")
