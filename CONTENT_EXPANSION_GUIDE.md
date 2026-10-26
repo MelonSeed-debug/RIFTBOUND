@@ -1,5 +1,8 @@
 # RIFTBOUND / Content Expansion v0.2
 
+> **CURRENT WORLD (v3):** The four-island map and World Map/Guide UIs are paused. RIFTBOUND now uses a 900-stud flat Grass practice field. Ambient bandits do not spawn; previously saved enemy-kill contracts are paused, but story NPCs/merchants are staged near spawn. The Level 25 optional Abyss dungeon portal has moved beside the field. Existing profile saves are unchanged. See [WORLD_BUILD_GUIDE.md](WORLD_BUILD_GUIDE.md) for the **permanent Studio Edit-mode Bake command** if you previously saved the old islands.
+
+
 **Scope:** inventory, consumables, equipment, merchants, story NPC dialogue, a five-chapter main quest arc, one dungeon and Abyss Warden mechanics, per-Spec mastery, Art Deco interface.
 
 Everything is written in Luau and committed to this repository. **It has not been run in Roblox Studio by the assistant**; the scripts and connections were inspected statically.
@@ -21,8 +24,6 @@ If you've already baked the island world (Workspace / RIFTBOUND World), keep it;
 | I | Inventory: use healing items, equip gear, view materials |
 | J or P | Quest Journal: accept, abandon, claim missions |
 | M | Open the Main Menu (Specs, Quests, Inventory, Map, World Guide, Character, Mastery, Dungeons) |
-| B | World Guide |
-| N | Island Map |
 | Z X C V G | Equipped Spec abilities; C/V/G have mastery thresholds |
 | E near a named NPC | Dialogue or dungeon entrance |
 
@@ -81,8 +82,8 @@ The previous v4 saved mastery generated from NPC defeats is migrated once at **2
 
 ## Main Menu & UI contrast fix
 
-- **M** now opens the centralized 8-section Main Menu. Choose Specs there to equip Ashley Simmons or earned Void Disciple.
-- The **SPECS** quick toggle, Quests toggle, Inventory toggle, and Map quick toggle are hidden; direct keyboard shortcuts still work, including I, J/P, B and N.
+- **M** opens the centralized 6-section Main Menu (Specs, Quests, Inventory, Character, Mastery, and Dungeons). Map/Guide sections are paused.
+- The extra quick toggles are hidden; direct keyboard shortcuts **I and J/P** still work. **B/N** world map shortcuts are paused.
 - The central menu displays character, mastery and dungeon information without duplicating persistent profile state.
 - Art Deco panels use a white tint base for their dark color gradient (UIGradient multiplies the tint), and the ScreenGui uses Sibling ZIndex layering so modal text/buttons are not hidden beneath their own background.
 - Old Spec selection no longer automatically pops up on spawn.
@@ -97,7 +98,7 @@ The previous v4 saved mastery generated from NPC defeats is migrated once at **2
 - The sidebar uses live, server-replicated cooldown timestamps and mastery XP, while still allowing all movement and combat at the screen center.
 - The duplicate left mastery card and old centered Void HUD have been removed; the original left status bars and combat/loot notifications are retained.
 - When a large menu or NPC dialogue opens, the skills list hides to avoid covering text. It scales down on smaller displays, and compact touch screens keep their real on-screen skill buttons.
-- Large panels remain mutually exclusive; **M** is the main menu, **I** Inventory, **J/P** Quests, **B** World Guide, **N** Map.
+- Large panels remain mutually exclusive; **M** opens the menu, **I** Inventory, and **J/P** Quests. The World Guide/Map are temporarily removed.
 - UI is currently native Roblox frames and text, not an imported screenshot asset.
 
 ### Right-side skill UI test
@@ -130,7 +131,7 @@ Storage uses the same key and upgrades the snapshot version to 4 without resetti
 ## Test checklist
 
 - [ ] Red/yellow Output free of module errors at startup
-- [ ] M opens the new main menu and its eight entries work; I opens Inventory and J/P open Quests. Shop prompts for Dr. Liora and Gilded Broker still open the Buy tab.
+- [ ] M opens the streamlined six-option menu; I opens Inventory and J/P open Quests. Dr. Liora and Gilded Broker are close to spawn and still open the Buy tab.
 - [ ] Buying a bandage removes exactly 35 Rift Coins and adds one bandage
 - [ ] Damaged player can use bandage; full-health player cannot waste it
 - [ ] Equip Iron Grips and verify damage is increased
