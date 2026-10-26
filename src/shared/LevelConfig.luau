@@ -9,7 +9,11 @@ LevelConfig.CurrencyName = "Rift Coins"
 LevelConfig.Rewards = {
 	["Street Brawler"] = {XP = 80, Coins = 18},
 	["Street Guard"] = {XP = 115, Coins = 28},
+	["Scrap Enforcer"] = {XP = 180, Coins = 48},
+	["Forge Marauder"] = {XP = 235, Coins = 65},
 	["Rift Sentinel"] = {XP = 310, Coins = 90},
+	["Rift Stalker"] = {XP = 450, Coins = 130},
+	["Void Ravager"] = {XP = 740, Coins = 215},
 }
 
 function LevelConfig.XPToNext(level)
