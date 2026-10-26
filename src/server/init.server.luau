@@ -96,7 +96,8 @@ local function m1(player)
 	s.combo = s.combo % #config.M1.Damages + 1
 	s.lastHit = now
 	local combo = s.combo
-	s.nextM1 = now + (combo == 4 and config.M1.FinisherCooldown or config.M1.HitCooldown)
+	local slowAttack = (character:GetAttribute("Pill_MoodStabilizer") or 0) > os.clock()
+	s.nextM1 = now + (combo == 4 and config.M1.FinisherCooldown or config.M1.HitCooldown) * (slowAttack and (1 / 0.97) or 1)
 	s.attacking = true
 	fx:FireAllClients("Swing", character, combo)
 	if character:GetAttribute("FrenzyNausea") == true then
@@ -156,7 +157,8 @@ local function heavy(player)
 	if not character or s.blocking or s.attacking or os.clock() < s.stunnedUntil then return end
 	local now = os.clock()
 	if now < s.nextHeavy then return end
-	s.nextHeavy = now + config.Heavy.Cooldown
+	local slowAttack = (character:GetAttribute("Pill_MoodStabilizer") or 0) > os.clock()
+	s.nextHeavy = now + config.Heavy.Cooldown * (slowAttack and (1 / 0.97) or 1)
 	s.attacking = true
 	fx:FireAllClients("HeavySwing",character)
 	if character:GetAttribute("FrenzyNausea") == true then
