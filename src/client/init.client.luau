@@ -146,6 +146,18 @@ if voidHUDModule and voidHUDModule:IsA("ModuleScript") then
 	end
 end
 
+-- Zone tracker and B world guide are optional and never affect controls.
+local worldHUDModule = script:FindFirstChild("WorldHUD") or script:WaitForChild("WorldHUD", 3)
+if worldHUDModule and worldHUDModule:IsA("ModuleScript") then
+	local loaded, worldHUD = pcall(require, worldHUDModule)
+	if loaded and type(worldHUD) == "table" and type(worldHUD.Init) == "function" then
+		local built, err = pcall(worldHUD.Init, Players.LocalPlayer, gui)
+		if not built then warn("[RIFTBOUND] World HUD failed:", err) end
+	else
+		warn("[RIFTBOUND] World HUD unavailable:", worldHUD)
+	end
+end
+
 -- Quest journal is optional: broken UI never disables attacks or Spec selection.
 local boardModule = script:FindFirstChild("QuestBoard") or script:WaitForChild("QuestBoard", 3)
 if boardModule and boardModule:IsA("ModuleScript") then
