@@ -120,10 +120,10 @@ function HUD.Init(player, gui)
 	local remote = ReplicatedStorage.Riftbound.Remotes:FindFirstChild("ProgressionFX")
 	if remote then
 		remote.OnClientEvent:Connect(function(effect, enemyName, xp, coins, levelsGained)
-			if effect ~= "NPCReward" then return end
+			if effect ~= "NPCReward" and effect ~= "QuestReward" then return end
 			toastNumber += 1
 			local token = toastNumber
-			rewardText.Text = "+" .. tostring(xp) .. " XP  •  +" .. tostring(coins)
+			rewardText.Text = (effect == "QuestReward" and "QUEST COMPLETE!  " or "") .. "+" .. tostring(xp) .. " XP  •  +" .. tostring(coins)
 				.. " Rift Coins" .. (levelsGained > 0 and ("  •  LEVEL UP +" .. tostring(levelsGained)) or "")
 			rewardText.TextColor3 = levelsGained > 0
 				and Color3.fromRGB(255, 226, 119)
