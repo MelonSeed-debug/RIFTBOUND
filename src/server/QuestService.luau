@@ -3,6 +3,7 @@
 -- all eligibility, progress and rewards come from Progression on the server.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Progression = require(script.Parent.Progression)
+local World = require(ReplicatedStorage.Riftbound.Shared.WorldConfig)
 local QuestService = {}
 local throttle = setmetatable({}, {__mode = "k"})
 local started = false
@@ -86,11 +87,11 @@ function QuestService.Start()
 		prompt.Parent = part
 		prompt.Triggered:Connect(callback)
 	end
-	makeStation("Rift Archivist", "Browse Quests", Vector3.new(-13,0,8),
+	makeStation("Rift Archivist", "Browse Quests", World.QuestStations.Archivist,
 		Color3.fromRGB(109, 188, 242), function(player)
 			fx:FireClient(player, "OpenJournal", "")
 		end)
-	makeStation("Void Trial Altar", "Start Void Trial", Vector3.new(12,0,-49),
+	makeStation("Void Trial Altar", "Start Void Trial", World.QuestStations.VoidTrial,
 		Color3.fromRGB(171, 79, 239), function(player)
 			local success, msg = Progression.AcceptQuest(player, "VoidTrial")
 			fx:FireClient(player, "OpenJournal", "")
