@@ -55,7 +55,9 @@ local function publish(player, p)
 	player:SetAttribute("QuestPermit_RiftInitiate", p.questPermits.RiftInitiate == true)
 	for id, spec in registry.Specs do
 		player:SetAttribute("SpecUnlocked_" .. id, spec.StarterUnlocked == true or p.specUnlocks[id] == true)
-		player:SetAttribute("SpecMastery_" .. id, p.mastery[id] or 0)
+		local total = p.mastery[id] or 0
+		player:SetAttribute("SpecMastery_" .. id, total)
+		player:SetAttribute("SpecMasteryLevel_" .. id, masteryConfig.LevelForXP(total))
 	end
 	player:SetAttribute("RiftInventoryJSON", HttpService:JSONEncode(p.inventory))
 	player:SetAttribute("EquippedGear", p.equippedGear)
@@ -137,9 +139,13 @@ local function load(player, p)
 		local gear = typeof(saved.equippedGear) == "string" and saved.equippedGear or ""
 		p.equippedGear = items.Items[gear] and items.Items[gear].Kind == "Gear"
 			and (p.inventory[gear] or 0) > 0 and gear or ""
-		local savedMastery = typeof(saved.mastery) == "table" and saved.mastery or {}
+		local savedMastery = typeof(saved.masteryXP) == "table" and saved.masteryXP or nil
+		local legacy = typeof(saved.mastery) == "table" and saved.mastery or {}
 		for id in registry.Specs do
-			p.mastery[id] = cleanInteger(savedMastery[id], 0, masteryConfig.MaxMastery, 0)
+			-- Preserve previous defeat-earned progression when migrating v4 saves.
+			-- New mastery points accumulate only from valid ability casts.
+			local xp = savedMastery and savedMastery[id] or ((legacy[id] or 0) * 2)
+			p.mastery[id] = cleanInteger(xp, 0, masteryConfig.MaxMasteryXP, 0)
 		end
 		p.abyssClears = cleanInteger(saved.abyssClears, 0, 999999, 0)
 		local quests = typeof(saved.quests) == "table" and saved.quests or {}
@@ -219,13 +225,6 @@ function Progression.AwardNPCDefeat(player, npcName)
 	local xp, coins = reward.XP, reward.Coins
 	local levelsGained = applyReward(p, xp, coins, 1)
 	if p.loaded then
-		local spec = player:GetAttribute("EquippedSpec")
-		if spec and registry.Specs[spec] then
-			local prev = p.mastery[spec] or 0
-			p.mastery[spec] = math.min(masteryConfig.MaxMastery, prev + 1)
-			p.revision += 1
-			p.dirty = true
-		end
 		local loot = rollLoot(p, npcName)
 		if #loot > 0 then
 			local drop = loot[1]
@@ -288,6 +287,30 @@ function Progression.AdvanceObjective(player, objective)
 	p.revision += 1
 	p.dirty = true
 	publish(player,p)
+	return true
+end
+
+-- Only called by the server after a skill actually casts; repeated
+-- client requests during cooldown cannot farm mastery.
+function Progression.AwardSkillUse(player, specId, key)
+	local p=profiles[player]
+	if not p or not p.loaded then return false end
+	if typeof(specId)~="string" or typeof(key)~="string" then return false end
+	if player:GetAttribute("EquippedSpec")~=specId or not registry.Specs[specId] then return false end
+	local amount=masteryConfig.XPPerCast[key]
+	if not amount then return false end
+	local current=p.mastery[specId] or 0
+	local nextValue=math.min(masteryConfig.MaxMasteryXP,current+amount)
+	if nextValue<=current then return false end
+	p.mastery[specId]=nextValue
+	p.revision+=1
+	p.dirty=true
+	publish(player,p)
+	if feedback then
+		local level=masteryConfig.LevelForXP(nextValue)
+		local previous=masteryConfig.LevelForXP(current)
+		feedback:FireClient(player,"MasteryGain",specId,amount,nextValue,level,level>previous)
+	end
 	return true
 end
 
@@ -463,9 +486,9 @@ function Progression.Save(player)
 		},
 		inventory = table.clone(p.inventory),
 		equippedGear = p.equippedGear,
-		mastery = table.clone(p.mastery),
+		masteryXP = table.clone(p.mastery),
 		abyssClears = p.abyssClears,
-		version = 4,
+		version = 5,
 	}
 	local success, err = pcall(function()
 		store:UpdateAsync("Player_" .. tostring(player.UserId), function()
