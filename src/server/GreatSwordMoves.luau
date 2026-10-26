@@ -232,6 +232,7 @@ function Sword.Cast(player, key)
 			if character.Parent and character:GetAttribute("RiftDefenseBuffEnds") == endTime then
 				character:SetAttribute("RiftDefenseBuffEnds", 0)
 				character:SetAttribute("RiftDefenseBuffMultiplier", 1)
+				fx:FireAllClients("SwordGuardEnd", character)
 			end
 		end)
 		return true
