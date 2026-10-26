@@ -91,7 +91,8 @@ function Manager.Init(_,gui)
 			applyScale(vitals,scale,"ResponsiveVitalsScale")
 			vitals.Position=compact
 				and UDim2.new(0,15,0,276)
-				or UDim2.new(0,15,1,-176)
+				or (h<580 and UDim2.new(0,15,0,250)
+					or UDim2.new(0,15,1,-176))
 		end
 
 		local header=gui:FindFirstChild("WorldGuideToggle")
