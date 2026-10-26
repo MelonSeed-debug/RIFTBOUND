@@ -158,6 +158,18 @@ if worldHUDModule and worldHUDModule:IsA("ModuleScript") then
 	end
 end
 
+-- Concept map: interactive district layout, N key, and live player marker.
+local worldMapModule = script:FindFirstChild("WorldMapHUD") or script:WaitForChild("WorldMapHUD", 3)
+if worldMapModule and worldMapModule:IsA("ModuleScript") then
+	local loaded, worldMap = pcall(require, worldMapModule)
+	if loaded and type(worldMap) == "table" and type(worldMap.Init) == "function" then
+		local built, err = pcall(worldMap.Init, Players.LocalPlayer, gui)
+		if not built then warn("[RIFTBOUND] World Map HUD failed:", err) end
+	else
+		warn("[RIFTBOUND] World Map HUD unavailable:", worldMap)
+	end
+end
+
 -- Quest journal is optional: broken UI never disables attacks or Spec selection.
 local boardModule = script:FindFirstChild("QuestBoard") or script:WaitForChild("QuestBoard", 3)
 if boardModule and boardModule:IsA("ModuleScript") then
