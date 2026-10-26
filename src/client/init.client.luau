@@ -21,17 +21,26 @@ local function fireSpec(ashleyAction, voidAction)
 		specRequest:FireServer(voidAction)
 	end
 end
--- Optional animation layer must not disable combat inputs.
+-- IMPORTANT: animation assets are OPTIONAL. Previously the startup blocked
+-- here before creating ANY HUD if AnimationConfig was missing/not replicated.
+-- Load asynchronously so even stalled/malformed animation packs never hide
+-- the player's menu, vitals, skill list, inventory or combat controls.
 local Motion = {Play = function() end}
-local motionModule = script:FindFirstChild("CombatAnimations") or script:WaitForChild("CombatAnimations", 3)
-if motionModule and motionModule:IsA("ModuleScript") then
-	local ok, loaded = pcall(require, motionModule)
-	if ok and type(loaded) == "table" then
-		Motion = loaded
-	else
-		warn("[RIFTBOUND] Animation controller unavailable:", loaded)
+task.spawn(function()
+	local module = script:FindFirstChild("CombatAnimations")
+		or script:WaitForChild("CombatAnimations", 5)
+	if not module or not module:IsA("ModuleScript") then
+		warn("[RIFTBOUND] CombatAnimations module is missing. Check Rojo sync.")
+		return
 	end
-end
+	local ok, loaded = pcall(require, module)
+	if ok and type(loaded) == "table" and type(loaded.Play) == "function" then
+		Motion = loaded
+		print("[RIFTBOUND] Animation layer ready; HUD startup remains independent.")
+	else
+		warn("[RIFTBOUND] CombatAnimations failed, HUD continues:", loaded)
+	end
+end)
 
 local function attack(_, inputState)
 	if inputState == Enum.UserInputState.Begin then request:FireServer("M1") end
