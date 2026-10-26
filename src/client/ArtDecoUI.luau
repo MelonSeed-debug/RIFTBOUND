@@ -63,17 +63,20 @@ local function trim(parent)
 end
 
 function Theme.Panel(frame)
-	frame.BackgroundColor3=Theme.Ink
-	frame.BackgroundTransparency=0.06
+	-- UIGradient MULTIPLIES the frame's BackgroundColor3. Combining an
+	-- almost-black color with a dark gradient makes the panel pitch black.
+	-- Use white as the un-tinted base so the gradient displays its real shades.
+	frame.BackgroundColor3=Color3.new(1,1,1)
+	frame.BackgroundTransparency=0.02
 	frame.BorderSizePixel=0
 	stroke(frame,1.7,Theme.Gold)
 	local grad=frame:FindFirstChild("DecoPanelGradient") or Instance.new("UIGradient")
 	grad.Name="DecoPanelGradient"
 	grad.Rotation=90
 	grad.Color=ColorSequence.new({
-		ColorSequenceKeypoint.new(0,Theme.Slate),
-		ColorSequenceKeypoint.new(0.45,Theme.Ink),
-		ColorSequenceKeypoint.new(1,Color3.fromRGB(21,20,23)),
+		ColorSequenceKeypoint.new(0,Color3.fromRGB(47,43,42)),
+		ColorSequenceKeypoint.new(0.46,Color3.fromRGB(22,24,31)),
+		ColorSequenceKeypoint.new(1,Color3.fromRGB(34,30,28)),
 	})
 	grad.Parent=frame
 	if not frame:FindFirstChild("Art Deco Top Inlay") then trim(frame) end
