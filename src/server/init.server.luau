@@ -273,11 +273,11 @@ local function m1(player)
 	if character:GetAttribute("FrenzyNausea") == true then
 		character:SetAttribute("FrenzyNausea", nil)
 		fx:FireAllClients("NauseaMiss", character)
-		task.delay(config.M1.Recovery, function() s.attacking = false end)
+		task.delay(sword and sword.M1Recovery or config.M1.Recovery, function() s.attacking = false end)
 		return
 	end
 	-- Resolve hit after short windup; use SERVER character position.
-	task.delay(0.12, function()
+	task.delay(sword and sword.M1Windup or config.M1.Windup, function()
 		local liveChar, _, liveRoot = alive(player)
 		if liveChar ~= character or not liveRoot then return end
 		local range = sword and sword.M1Range or config.M1.Range
@@ -323,7 +323,7 @@ local function m1(player)
 			end
 		end
 	end)
-	task.delay(0.20, function() s.attacking = false end)
+	task.delay(sword and sword.M1Recovery or config.M1.Recovery, function() s.attacking = false end)
 end
 
 local function heavy(player)
@@ -341,10 +341,10 @@ local function heavy(player)
 	if character:GetAttribute("FrenzyNausea") == true then
 		character:SetAttribute("FrenzyNausea", nil)
 		fx:FireAllClients("NauseaMiss", character)
-		task.delay(config.Heavy.Recovery, function() s.attacking = false end)
+		task.delay(sword and sword.HeavyRecovery or config.Heavy.Recovery, function() s.attacking = false end)
 		return
 	end
-	task.delay(config.Heavy.Windup,function()
+	task.delay(sword and sword.HeavyWindup or config.Heavy.Windup,function()
 		local current, _, currentRoot = alive(player)
 		if current ~= character or not currentRoot or os.clock() < s.stunnedUntil then return end
 		local params = OverlapParams.new()
@@ -400,7 +400,7 @@ local function heavy(player)
 			end
 		end
 	end)
-	task.delay(config.Heavy.Recovery,function() s.attacking=false end)
+	task.delay(sword and sword.HeavyRecovery or config.Heavy.Recovery,function() s.attacking=false end)
 end
 
 local function dash(player)
