@@ -12,7 +12,13 @@ local Progression = {}
 local profiles = {}
 local started = false
 
-local store = DataStoreService:GetDataStore("RIFTBOUND_Progression_v1")
+local storeOK, store = pcall(function()
+	return DataStoreService:GetDataStore("RIFTBOUND_Progression_v1")
+end)
+if not storeOK then
+	warn("[RIFTBOUND Progression] DataStore unavailable; using session-only progress:", store)
+	store = nil
+end
 
 local function cleanInteger(value, minimum, maximum, default)
 	if typeof(value) ~= "number" or value ~= value or value == math.huge or value == -math.huge then
@@ -59,9 +65,12 @@ end
 
 local function load(player, p)
 	local key = "Player_" .. tostring(player.UserId)
-	local success, result = pcall(function()
-		return store:GetAsync(key)
-	end)
+	local success, result
+	if store then
+		success, result = pcall(function() return store:GetAsync(key) end)
+	else
+		success, result = false, "DataStore could not be created"
+	end
 	if profiles[player] ~= p then return end
 	if success then
 		local saved = typeof(result) == "table" and result or {}
@@ -122,7 +131,7 @@ end
 
 function Progression.Save(player)
 	local p = profiles[player]
-	if not p or not p.loaded or not p.canSave or not p.dirty then return end
+	if not p or not p.loaded or not p.canSave or not p.dirty or not store then return end
 	if p.saving then
 		local start = os.clock()
 		while p.saving and os.clock() - start < 8 do task.wait(0.1) end
