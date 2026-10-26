@@ -1,65 +1,54 @@
-# RIFTBOUND / World Design v2
+# RIFTBOUND / Flat Grass Practice Field v3
 
-This is a playable **stylized Roblox interpretation** of the four-island RIFTBOUND concept poster. It is not an exact reproduction of custom 3D models or textures.
+RIFTBOUND is temporarily stepping away from its old four-island world and from repetitive NPC bandit grinding. The **current playground is simple grass**, designed for combat, animations, Specs, movement and future PvP testing.
 
-## What's included
+## What is active
 
-- **Haven District (safe):** central blue crystal nexus, city blocks, training courtyard, quest hub, three fast-travel portals.
-- **Old Quarter (levels 1–10):** close-set neon shops, night market, city street grid, Street Brawler and Street Guard.
-- **Ironworks (levels 10–25):** furnaces, smokestacks, cranes, containers, and an open **Rift Sentinel** boss arena.
-- **Rift Expanse (levels 25–50):** purple crystals, floating rocks, and an unfinished abyss-citadel/dungeon gate.
-- **Four bridges:** Haven to Old Quarter, Haven to Ironworks, Ironworks to Rift Expanse, and Old Quarter to Ironworks.
-- **Press N** for the island map with your location marked, **B** for the World Guide, **E** to use nearby fast-travel pads.
-- Enemy locations, XP rewards, Void Trial altar, Rift Archivist and training dummy have been moved with the map.
+- One 900 × 900 stud anchored Grass floor centered on the original SpawnLocation.
+- Bright daytime lighting, no distant district scenery, bridges, or crystal citadel.
+- The 500 HP Studio training dummy, plus story and shop characters staged close to spawn for functional testing.
+- M Main Menu (Specs, Quests, Inventory, Character, Mastery and Dungeons).
+- Skill mastery, both existing Specs, saved level/coins/inventory, and story dialogue.
+- No automatic bandit patrols. All old kill-contract quests are paused in practice mode and hidden in the Quest Journal, **except if one is already active**, so it can still be abandoned.
+- The dungeon is an **optional, separately entered boss challenge**, not a roaming enemy on the field. Enter through the purple portal near spawn at Level 25.
 
-## Installation
+## Update your ZIP-based Rojo installation
 
-You don't have a local git clone, so download the latest repository ZIP:
+1. Download the latest ZIP from https://github.com/MelonSeed-debug/RIFTBOUND .
+2. Replace the local `src` folder completely, **not just individual scripts**. This removes old world/UI files as intended. Keep any unrelated local non-repo files.
+3. Replace `default.project.json` from the ZIP.
+4. Stop `.\rojo.exe serve`, then run it again in `C:\Users\danie\Downloads\RIFTBOUND`.
+5. Reconnect Rojo to Studio and start a **Server & Clients** session.
 
-1. Download the current ZIP from https://github.com/MelonSeed-debug/RIFTBOUND .
-2. Replace your local `src` folder with the new `src`; replace `default.project.json` if it changed.
-3. Stop Rojo, then run `.\rojo.exe serve` from `C:\Users\danie\Downloads\RIFTBOUND`.
-4. Reconnect the Rojo Studio plugin.
-5. Run **Server & Clients**. The map auto-generates for a test when none is saved in the place.
+The server now removes an old generated folder named `Workspace > RIFTBOUND World` (v2) on game start and builds a v3 grass floor instead. It also removes old generated quest/actor staging folders so their NPCs respawn near the field. **This only changes the running Play session.** If the old islands were baked and saved into the place, they will reappear after stopping Play until the steps below are performed.
 
-## Make it permanent and editable in Studio
+## Make flat grass permanent in Edit Mode
 
-Do this **in Edit mode, not while Play is running**:
+With Play **stopped**, Rojo connected, and the latest scripts synced:
 
-1. Connect Rojo with the latest project. Confirm `ServerScriptService > RiftboundServer > WorldBuilder` appears.
-2. Open Studio **Command Bar** (via View / Window if hidden).
-3. Run:
+1. Open **View > Command Bar** (or the equivalent Command Bar in Studio).
+2. Run exactly:
 
 ```lua
 require(game.ServerScriptService.RiftboundServer.WorldBuilder).Bake()
 ```
 
-4. In **Explorer**, expand `Workspace > RIFTBOUND World`. You can select and edit every building, crystal, bridge, and ground part.
-5. **Save the place** (File > Save to File and/or Publish to Roblox). The map then stays in Edit mode and is reused when you press Play.
+3. In Explorer, inspect `Workspace > RIFTBOUND World > FLAT GRASS — EDITABLE FIELD`. The old generated islands/bridges under `RIFTBOUND World` have been replaced with the grass part.
+4. **Save or Publish the place**. This is what makes the change persist in Studio Edit Mode and the published experience.
 
-The generated map lives under Workspace, which our Rojo project does **not** synchronize, so it won't disappear when you reconnect Rojo.
+The Bake command **deletes the older generated `RIFTBOUND World` folder**, including manual changes inside it; save a backup place first if you want to recover that previous island map. It does not delete unrelated Workspace models.
 
-**Regeneration:** If you want the exact generated map again, delete only the folder `Workspace > RIFTBOUND World` in Edit mode, then run the Bake command again. This will erase any manual edits to that generated folder.
+### If the old island models are still visible
 
-The current map is made of Studio Parts and primitives, not imported meshes. Functional shops, interiors, water swimming, custom terrain sculpting, and proper bridge/pathfinding optimizations come later.
+- Check whether they are inside a separate manually created folder, not `RIFTBOUND World`. This updater only removes the generated RIFTBOUND folder.
+- If your previous island edits were not saved and are only appearing while playing, replace the entire `src` folder and restart Rojo.
+- The script hides an existing default large Baseplate to prevent it from covering the grass part. The floor itself is directly under the generated folder.
+- If you've baked the field already, rerunning Bake does not delete your manually edited v3 field; remove `Workspace > RIFTBOUND World` yourself **only when you intentionally want to regenerate it**.
 
-## Test list
+## Current limitations / direction
 
-- Spawn in Haven. There should be an accessible training dummy and a blue quest-giver.
-- Verify Old Quarter and Ironworks are reachable by bridges.
-- Press N to see your current location on the island map.
-- Check fast travel: Old Quarter requires level 1, Ironworks level 10, Rift Expanse level 25.
-- NPCs are currently Studio-only (CombatConfig.NPC.StudioOnly=true). Safe hub is not supposed to be attackable.
-- At level 10 with Rift Initiation complete, use the Void Trial altar beside the Sentinel arena.
-
-### Troubleshooting
-
-**Old linear blockout:** Stop Play, sync all new `src` files; the v2 builder replaces old generated v1 worlds.
-
-**No visible map:** Check Studio Output for `[RIFTBOUND World]` errors and whether the `WorldVisuals` and `WorldBuilder` ModuleScripts were synced.
-
-**No permanent geometry:** Runtime-generated Parts disappear after stopping Play; use the Bake command above in Edit mode and save the place.
-
-**Older Baseplate hidden:** The generator hides a large object literally named `Baseplate` to expose the surrounding ocean. To restore it, select that Baseplate and reset Transparency=0 and CanCollide=true. To disable automatic hiding, set `HideDefaultBaseplate=false` in `src/shared/WorldConfig.luau`.
-
-**Important:** No in-Studio playtest has been performed by ChatGPT. Verify movement, NPC paths, and performance after syncing.
+- **This is not the final game world**; a larger environment can be designed later around combat and actual player activities rather than simple NPC-kill grinding.
+- Open-world enemy contracts, Void Trial and Rift Sentinel wandering encounter are paused. Your saved progression and Spec ownership have **not** been reset.
+- Some story chapters still require levels originally balanced around PvE. This will need a redesigned progression loop (e.g., training challenges, narrative objectives, duels, exploration) rather than farming bandits.
+- The optional dungeon still has a dedicated instance-like arena far away from the grass field, using the existing server NPC code.
+- Code is committed but **has not been tested inside Roblox Studio**. Inspect Output for `[RIFTBOUND Field]` or script errors after syncing.
