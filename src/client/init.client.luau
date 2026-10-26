@@ -100,6 +100,18 @@ label.TextSize = 13
 label.Text = "RIFTBOUND  |  M1  R Heavy  F Block  Q Dash  Z X C V G Skills"
 label.Parent = gui
 
+-- Optional progression HUD. If it fails to sync, combat controls still work.
+local hudModule = script:FindFirstChild("ProgressionHUD") or script:WaitForChild("ProgressionHUD", 3)
+if hudModule and hudModule:IsA("ModuleScript") then
+	local loaded, hud = pcall(require, hudModule)
+	if loaded and type(hud) == "table" and type(hud.Init) == "function" then
+		local built, err = pcall(hud.Init, Players.LocalPlayer, gui)
+		if not built then warn("[RIFTBOUND] Progression HUD failed:", err) end
+	else
+		warn("[RIFTBOUND] Progression HUD unavailable:", hud)
+	end
+end
+
 -- The Spec menu is an optional UI module: combat input still loads without it.
 local specMenuModule = script:FindFirstChild("SpecMenu") or script:WaitForChild("SpecMenu", 3)
 if specMenuModule and specRequest then
