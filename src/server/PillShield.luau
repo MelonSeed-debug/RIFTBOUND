@@ -1,6 +1,7 @@
 --!strict
 -- Ashley's Pill Shield: server-authoritative absorption for RIFTBOUND combat.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Players = game:GetService("Players")
 local cfg = require(ReplicatedStorage.Riftbound.Shared.AshleySimmonsSpec).Abilities.Z
 local Shield = {}
 local cooldowns = setmetatable({}, {__mode="k"})
@@ -36,6 +37,12 @@ end
 
 function Shield.Damage(target, humanoid, amount, attacker)
 	if not humanoid or humanoid.Health <= 0 or amount <= 0 then return 0 end
+	-- Haven is a true player safe zone. The training dummy is intentionally
+	-- still attackable, but PvP and NPC damage to players inside is disallowed.
+	local victimPlayer = Players:GetPlayerFromCharacter(target)
+	if victimPlayer and target:GetAttribute("RiftSafeZone") == true then return 0 end
+	if victimPlayer and attacker and attacker.Character
+		and attacker.Character:GetAttribute("RiftSafeZone") == true then return 0 end
 	local time = workspace:GetServerTimeNow()
 	-- Shared server damage calculation for Spec status effects.
 	local attackerCharacter = attacker and attacker.Character
