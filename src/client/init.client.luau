@@ -95,6 +95,18 @@ bindSpecAction("RiftRaveRush", "RaveRush", "VoidGrasp", Enum.KeyCode.C, Enum.Key
 bindSpecAction("RiftTrippyToss", "TrippyToss", "VoidCleave", Enum.KeyCode.V, Enum.KeyCode.ButtonL1, "Trippy", UDim2.new(1,-230,1,-320))
 bindSpecAction("RiftFrenzy", "Frenzy", "VoidNova", Enum.KeyCode.G, Enum.KeyCode.ButtonY, "Frenzy", UDim2.new(1,-110,1,-320))
 
+-- Touch buttons show the names of whichever Spec is equipped.
+local function updateTouchAbilityTitles()
+	local isVoid = localPlayer:GetAttribute("EquippedSpec") == "VoidDisciple"
+	ContextActionService:SetTitle("RiftPillShield", isVoid and "Guard" or "Shield")
+	ContextActionService:SetTitle("RiftBuzzBoost", isVoid and "Step" or "Buzz")
+	ContextActionService:SetTitle("RiftRaveRush", isVoid and "Grasp" or "Rave")
+	ContextActionService:SetTitle("RiftTrippyToss", isVoid and "Cleave" or "Trippy")
+	ContextActionService:SetTitle("RiftFrenzy", isVoid and "Nova" or "Frenzy")
+end
+localPlayer:GetAttributeChangedSignal("EquippedSpec"):Connect(updateTouchAbilityTitles)
+updateTouchAbilityTitles()
+
 local gui = Instance.new("ScreenGui")
 gui.Name = "RIFTBOUND Controls"
 gui.ResetOnSpawn = false
