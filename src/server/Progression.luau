@@ -8,6 +8,7 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local cfg = require(ReplicatedStorage.Riftbound.Shared.LevelConfig)
 local questCfg = require(ReplicatedStorage.Riftbound.Shared.QuestConfig)
+local registry = require(ReplicatedStorage.Riftbound.Shared.SpecRegistry)
 local feedback = ReplicatedStorage.Riftbound.Remotes:FindFirstChild("ProgressionFX")
 local Progression = {}
 local profiles = {}
@@ -47,6 +48,9 @@ local function publish(player, p)
 		player:SetAttribute("QuestCompleted_" .. id, p.questCompleted[id] == true)
 	end
 	player:SetAttribute("QuestPermit_RiftInitiate", p.questPermits.RiftInitiate == true)
+	for id, spec in registry.Specs do
+		player:SetAttribute("SpecUnlocked_" .. id, spec.StarterUnlocked == true or p.specUnlocks[id] == true)
+	end
 end
 
 local function addXP(p, amount)
@@ -98,6 +102,23 @@ local function load(player, p)
 		end
 		local permits = typeof(quests.permits) == "table" and quests.permits or {}
 		p.questPermits.RiftInitiate = permits.RiftInitiate == true or p.questCompleted.RiftInitiation == true
+		local savedSpecs = typeof(saved.specs) == "table" and saved.specs or {}
+		local savedUnlocked = typeof(savedSpecs.unlocked) == "table" and savedSpecs.unlocked or {}
+		for id, spec in registry.Specs do
+			if not spec.StarterUnlocked then
+				p.specUnlocks[id] = savedUnlocked[id] == true
+					or (id == "VoidDisciple" and p.questCompleted.VoidTrial == true)
+			end
+		end
+		local savedEquipped = typeof(savedSpecs.equipped) == "string" and savedSpecs.equipped or registry.Default
+		local spec = registry.Specs[savedEquipped]
+		if spec and spec.Ready and (spec.StarterUnlocked or p.specUnlocks[savedEquipped])
+			and (not spec.RequiredLevel or p.level >= spec.RequiredLevel)
+			and (not spec.RequiredPermit or p.questPermits[spec.RequiredPermit] == true) then
+			p.equippedSpec = savedEquipped
+		else
+			p.equippedSpec = registry.Default
+		end
 		local activeDefinition = questCfg.Quests[p.questActive]
 		if not activeDefinition or (not activeDefinition.Repeatable and p.questCompleted[p.questActive]) then
 			p.questActive, p.questCount = "", 0
@@ -115,6 +136,7 @@ local function load(player, p)
 			applyReward(p, p.pendingXP, p.pendingCoins, p.pendingKills)
 		end
 		p.canSave = true
+		player:SetAttribute("EquippedSpec", p.equippedSpec)
 	else
 		p.canSave = false
 		warn("[RIFTBOUND Progression] DataStore read failed; session progress only for", player.Name, result)
@@ -131,6 +153,7 @@ function Progression.Initialize(player)
 		loaded = false, canSave = false, dirty = false,
 		pendingXP = 0, pendingCoins = 0, pendingKills = 0,
 		questActive = "", questCount = 0, questCompleted = {}, questPermits = {},
+		specUnlocks = {}, equippedSpec = registry.Default,
 		revision = 0, saving = false,
 	}
 	profiles[player] = p
@@ -174,6 +197,9 @@ function Progression.AcceptQuest(player, questId)
 	if not definition then return false, "Unknown quest." end
 	if p.questActive ~= "" then return false, "Finish or abandon your active quest first." end
 	if p.level < definition.RequiredLevel then return false, "Reach level " .. definition.RequiredLevel .. " first." end
+	if definition.RequiredPermit and p.questPermits[definition.RequiredPermit] ~= true then
+		return false, "Complete Rift Initiation first."
+	end
 	if not definition.Repeatable and p.questCompleted[questId] then return false, "Quest already completed." end
 	p.questActive = questId
 	p.questCount = 0
@@ -206,12 +232,32 @@ function Progression.ClaimQuest(player)
 	p.questActive, p.questCount = "", 0
 	if not definition.Repeatable then p.questCompleted[id] = true end
 	if definition.Permit == "RiftInitiate" then p.questPermits.RiftInitiate = true end
+	if definition.UnlockSpec and registry.Specs[definition.UnlockSpec] then
+		p.specUnlocks[definition.UnlockSpec] = true
+	end
 	local gained = applyReward(p, definition.XP, definition.Coins, 0)
 	publish(player, p)
 	if feedback then
 		feedback:FireClient(player, "QuestReward", definition.Name, definition.XP, definition.Coins, gained)
 	end
-	return true, "Quest completed: " .. definition.Name
+	local suffix = definition.UnlockSpec and (" | UNLOCKED: " .. registry.Specs[definition.UnlockSpec].Name) or ""
+	return true, "Quest completed: " .. definition.Name .. suffix
+end
+
+-- Spec selection tells the profile about validated changes so equipped Spec
+-- persists alongside XP, coins, quest permits and earned Spec ownership.
+function Progression.RecordEquip(player, specId)
+	local p = profiles[player]
+	if not p or not p.loaded then return end
+	if specId ~= registry.Default and (not registry.Specs[specId]
+		or not registry.Specs[specId].Ready or
+		(not registry.Specs[specId].StarterUnlocked and p.specUnlocks[specId] ~= true)) then
+		return
+	end
+	if p.equippedSpec == specId then return end
+	p.equippedSpec = specId
+	p.revision += 1
+	p.dirty = true
 end
 
 function Progression.Save(player)
@@ -235,7 +281,11 @@ function Progression.Save(player)
 			completed = table.clone(p.questCompleted),
 			permits = table.clone(p.questPermits),
 		},
-		version = 2,
+		specs = {
+			equipped = p.equippedSpec,
+			unlocked = table.clone(p.specUnlocks),
+		},
+		version = 3,
 	}
 	local success, err = pcall(function()
 		store:UpdateAsync("Player_" .. tostring(player.UserId), function()
