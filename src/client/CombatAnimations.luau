@@ -264,9 +264,13 @@ function Motion.Play(character, effect, value)
 	local sword = character:GetAttribute("RiftSwordEquipped") == true
 	if effect == "SwordGuardEnd" then
 		local state = getState(character)
+		state.sequence += 1
 		if state.tracks.SwordBlock and state.tracks.SwordBlock.IsPlaying then
 			state.tracks.SwordBlock:Stop(0.12)
 		end
+		-- Also restore original shoulder/waist C0 after procedural fallback
+		-- guard poses, otherwise a missing animation can lock the avatar up.
+		reset(character, state, 0.12)
 		return
 	end
 	local move
