@@ -42,13 +42,15 @@ local fx = rift.Remotes.CombatFX
 local specFX = rift.Remotes:WaitForChild("SpecFX", 5)
 local specRequest = rift.Remotes:WaitForChild("SpecRequest", 5)
 local localPlayer = Players.LocalPlayer
-local function fireSpec(ashleyAction, voidAction)
+local function fireSpec(ashleyAction, voidAction, swordAction)
 	if not specRequest then return end
 	local equipped = localPlayer:GetAttribute("EquippedSpec")
 	if equipped == "AshleySimmons" then
 		specRequest:FireServer(ashleyAction)
 	elseif equipped == "VoidDisciple" then
 		specRequest:FireServer(voidAction)
+	elseif equipped == "GreatSword" and swordAction then
+		specRequest:FireServer(swordAction)
 	end
 end
 -- IMPORTANT: animation assets are OPTIONAL. Previously the startup blocked
@@ -91,7 +93,7 @@ local function dash(_, inputState)
 end
 ContextActionService:BindAction("RiftPillShield", function(_, inputState)
 	if inputState == Enum.UserInputState.Begin then
-		fireSpec("PillShield", "VoidGuard")
+		fireSpec("PillShield", "VoidGuard", "SwordGuard")
 	end
 	return Enum.ContextActionResult.Sink
 end, true, Enum.KeyCode.Z, Enum.KeyCode.DPadUp)
@@ -99,7 +101,7 @@ ContextActionService:SetTitle("RiftPillShield", "Shield")
 ContextActionService:SetPosition("RiftPillShield", UDim2.new(1,-300,1,-135))
 ContextActionService:BindAction("RiftBuzzBoost", function(_, inputState)
 	if inputState == Enum.UserInputState.Begin then
-		fireSpec("BuzzBoost", "VoidStep")
+		fireSpec("BuzzBoost", "VoidStep", "SwordLunge")
 	end
 	return Enum.ContextActionResult.Sink
 end, true, Enum.KeyCode.X, Enum.KeyCode.DPadLeft)
@@ -120,28 +122,30 @@ ContextActionService:SetPosition("RiftDash",UDim2.new(1,-145,1,-225))
 
 
 -- Ashley's remaining abilities: C, V and G, including gamepad and touch.
-local function bindSpecAction(name, action, voidAction, key, gamepad, buttonTitle, touchPosition)
+local function bindSpecAction(name, action, voidAction, swordAction, key, gamepad, buttonTitle, touchPosition)
 	ContextActionService:BindAction(name, function(_, state)
 		if state == Enum.UserInputState.Begin then
-			fireSpec(action, voidAction)
+			fireSpec(action, voidAction, swordAction)
 		end
 		return Enum.ContextActionResult.Sink
 	end, true, key, gamepad)
 	ContextActionService:SetTitle(name, buttonTitle)
 	ContextActionService:SetPosition(name, touchPosition)
 end
-bindSpecAction("RiftRaveRush", "RaveRush", "VoidGrasp", Enum.KeyCode.C, Enum.KeyCode.DPadRight, "Rave", UDim2.new(1,-355,1,-315))
-bindSpecAction("RiftTrippyToss", "TrippyToss", "VoidCleave", Enum.KeyCode.V, Enum.KeyCode.ButtonL1, "Trippy", UDim2.new(1,-230,1,-320))
-bindSpecAction("RiftFrenzy", "Frenzy", "VoidNova", Enum.KeyCode.G, Enum.KeyCode.ButtonY, "Frenzy", UDim2.new(1,-110,1,-320))
+bindSpecAction("RiftRaveRush", "RaveRush", "VoidGrasp", "SwordUplift", Enum.KeyCode.C, Enum.KeyCode.DPadRight, "Rave", UDim2.new(1,-355,1,-315))
+bindSpecAction("RiftTrippyToss", "TrippyToss", "VoidCleave", "SwordSlam", Enum.KeyCode.V, Enum.KeyCode.ButtonL1, "Trippy", UDim2.new(1,-230,1,-320))
+bindSpecAction("RiftFrenzy", "Frenzy", "VoidNova", "SwordExecution", Enum.KeyCode.G, Enum.KeyCode.ButtonY, "Frenzy", UDim2.new(1,-110,1,-320))
 
 -- Touch buttons show the names of whichever Spec is equipped.
 local function updateTouchAbilityTitles()
-	local isVoid = localPlayer:GetAttribute("EquippedSpec") == "VoidDisciple"
-	ContextActionService:SetTitle("RiftPillShield", isVoid and "Guard" or "Shield")
-	ContextActionService:SetTitle("RiftBuzzBoost", isVoid and "Step" or "Buzz")
-	ContextActionService:SetTitle("RiftRaveRush", isVoid and "Grasp" or "Rave")
-	ContextActionService:SetTitle("RiftTrippyToss", isVoid and "Cleave" or "Trippy")
-	ContextActionService:SetTitle("RiftFrenzy", isVoid and "Nova" or "Frenzy")
+	local current = localPlayer:GetAttribute("EquippedSpec")
+	local isVoid = current == "VoidDisciple"
+	local isSword = current == "GreatSword"
+	ContextActionService:SetTitle("RiftPillShield", isSword and "Guard" or (isVoid and "Guard" or "Shield"))
+	ContextActionService:SetTitle("RiftBuzzBoost", isSword and "Lunge" or (isVoid and "Step" or "Buzz"))
+	ContextActionService:SetTitle("RiftRaveRush", isSword and "Uplift" or (isVoid and "Grasp" or "Rave"))
+	ContextActionService:SetTitle("RiftTrippyToss", isSword and "Slam" or (isVoid and "Cleave" or "Trippy"))
+	ContextActionService:SetTitle("RiftFrenzy", isSword and "Execute" or (isVoid and "Nova" or "Frenzy"))
 end
 localPlayer:GetAttributeChangedSignal("EquippedSpec"):Connect(updateTouchAbilityTitles)
 updateTouchAbilityTitles()
@@ -615,10 +619,21 @@ specFX.OnClientEvent:Connect(function(effect, target, status)
 		Debris:AddItem(marker, 0.8)
 		return
 	end
+	if effect == "SwordAbility" and target and target:IsA("Model") then
+		Motion.Play(target, "SwordAbility", status)
+	end
 	if not target or not target:IsA("Model") then return end
 	local root = target:FindFirstChild("HumanoidRootPart")
 	if not root then return end
-	if effect == "RaveRush" then
+	if effect == "SwordAbility" then
+		local names = {Z="COVENANT GUARD",X="RENDING LUNGE",C="TITAN UPLIFT",
+			V="FALLING COVENANT",G="ABYSSAL EXECUTION"}
+		if names[status] then
+			floatingText(root, names[status] .. "!", Color3.fromRGB(255, 194, 104))
+			if status ~= "Z" then shockwave(root, Color3.fromRGB(173, 97, 255),status == "G" and 11 or 5) end
+		end
+		return
+	elseif effect == "RaveRush" then
 		floatingText(root, "RAVE RUSH!", Color3.fromRGB(110, 245, 220))
 		return
 	elseif effect == "FrenzyCast" then
