@@ -121,7 +121,9 @@ local function targets(center, radius, exclude)
 			found[model] = true
 			local humanoid = model:FindFirstChildOfClass("Humanoid")
 			local root = model:FindFirstChild("HumanoidRootPart")
-			if humanoid and root and humanoid.Health > 0 and (root.Position - center).Magnitude <= radius + 2 then
+			if humanoid and root and humanoid.Health > 0
+				and model:GetAttribute("RiftSafeZone") ~= true
+				and (root.Position - center).Magnitude <= radius + 2 then
 				table.insert(result, {model = model, humanoid = humanoid})
 			end
 		end
