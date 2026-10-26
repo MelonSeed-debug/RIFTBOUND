@@ -343,7 +343,8 @@ local function spawnOne(folder, center, definition, hooks)
 	model.Parent = folder
 	model:PivotTo(CFrame.new(spawnPosition))
 	pcall(function() root:SetNetworkOwner(nil) end)
-	healthBar(model, humanoid, definition.Color, definition.Name)
+	healthBar(model, humanoid, definition.Color,
+		definition.Name .. " | LV " .. tostring(definition.RecommendedLevel) .. "+")
 
 	local respawnQueued = false
 	humanoid.Died:Connect(function()
