@@ -196,6 +196,7 @@ function HUD.Init(player, gui)
 		local spec = player:GetAttribute("EquippedSpec")
 		local valid = spec == "AshleySimmons" or spec == "VoidDisciple"
 		sidebar.Visible = valid and not modalIsOpen()
+			and sidebar:GetAttribute("RiftHideForTouch") ~= true
 		if not valid then return end
 
 		local total = math.clamp(player:GetAttribute("SpecMastery_" .. spec) or 0,
