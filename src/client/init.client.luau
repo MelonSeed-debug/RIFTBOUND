@@ -152,29 +152,8 @@ if abilitiesModule and abilitiesModule:IsA("ModuleScript") then
 	end
 end
 
--- Zone tracker and B world guide are optional and never affect controls.
-local worldHUDModule = script:FindFirstChild("WorldHUD") or script:WaitForChild("WorldHUD", 3)
-if worldHUDModule and worldHUDModule:IsA("ModuleScript") then
-	local loaded, worldHUD = pcall(require, worldHUDModule)
-	if loaded and type(worldHUD) == "table" and type(worldHUD.Init) == "function" then
-		local built, err = pcall(worldHUD.Init, Players.LocalPlayer, gui)
-		if not built then warn("[RIFTBOUND] World HUD failed:", err) end
-	else
-		warn("[RIFTBOUND] World HUD unavailable:", worldHUD)
-	end
-end
-
--- Concept map: interactive district layout, N key, and live player marker.
-local worldMapModule = script:FindFirstChild("WorldMapHUD") or script:WaitForChild("WorldMapHUD", 3)
-if worldMapModule and worldMapModule:IsA("ModuleScript") then
-	local loaded, worldMap = pcall(require, worldMapModule)
-	if loaded and type(worldMap) == "table" and type(worldMap.Init) == "function" then
-		local built, err = pcall(worldMap.Init, Players.LocalPlayer, gui)
-		if not built then warn("[RIFTBOUND] World Map HUD failed:", err) end
-	else
-		warn("[RIFTBOUND] World Map HUD unavailable:", worldMap)
-	end
-end
+-- Flat-grass prototype: no district tracker, B world guide, or N island map.
+-- Existing combat, quests, Specs, inventory and mastery interfaces remain.
 
 -- Inventory, story dialogue and mastery panels use the provided Art Deco palette.
 -- Each is optional: a UI error cannot disable combat.
