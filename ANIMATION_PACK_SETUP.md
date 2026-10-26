@@ -1,5 +1,22 @@
 # RIFTBOUND Animation Pack Integration v0.1
 
+## Emergency: UI disappeared / no animations after import
+
+**First, open your real RIFTBOUND place.** Do NOT use **File > Open from File** on a `.rbxm`; that opens/imports it as a separate document rather than inserting the pack into your existing working place. If the Explorer no longer contains RIFTBOUND scripts and your UI vanished, reopen your previously saved or published RIFTBOUND place.
+
+Then:
+
+1. **Stop Play.** In Explorer, check `StarterPlayer > StarterPlayerScripts > RiftboundClient` (a LocalScript with children), `ServerScriptService > RiftboundServer`, and `ReplicatedStorage > Riftbound > Shared > AnimationConfig`.
+2. If any is missing: download the **latest GitHub RIFTBOUND source ZIP**, replace your local **entire `src` directory** and `default.project.json`, restart `.\\rojo.exe serve` from your RIFTBOUND project folder, and reconnect the Rojo plugin. Do not replace the source files with an animation-only ZIP.
+3. To verify in Studio **Edit Mode**, copy-paste the read-only [tools/DIAGNOSE_RIFTBOUND.lua](tools/DIAGNOSE_RIFTBOUND.lua) into the **Command Bar**, then open **View > Output** and look for `[MISSING]` entries.
+4. For local animation preview, either insert the curated `.rbxm` model into **ReplicatedStorage** (using **Insert from File**, not Open) or insert your original `150+ Weapon Animations & Models.rbxm` into ReplicatedStorage or Workspace. The animation code will now recognize the original Gauntlets / Dual Axes clips automatically, or the curated clip folder, even if nested one level down.
+5. Make sure your character is **R15**. Use **Server & Clients** and press left click, R heavy, F block and Q dash. Watch **View > Output** for `[RIFTBOUND Animations]`.
+6. The animation loader is now completely **isolated from UI startup** and times out missing config lookups. A broken/missing animation should still leave the HUD, menu, health and inventory available.
+7. If the original full pack causes frame drops, run [tools/IMPORT_ORIGINAL_ANIMATIONS.lua](tools/IMPORT_ORIGINAL_ANIMATIONS.lua) in **Edit Mode** to create a 21-clip `ReplicatedStorage > RIFTBOUND Animation Clips` folder. You can then remove the huge original imported model from Studio (but keep the original file on your PC).
+
+Important: **Studio-local preview animations are not published Roblox assets.** You still need to publish them under the game's owner/group and fill in IDs in `AnimationConfig.luau` for your actual live game.
+
+
 The uploaded **150+ Weapon Animations & Models.rbxm** contains **158 KeyframeSequences across 8 rig sets** (Dual Axes, Great Sword, Trident, Dual Great Shield, Gauntlets, Requiem, Oathkeeper and Lance).
 
 The source model includes ~139,000 Roblox instances, mostly keyframes and poses. We extracted a smaller **21-clip R15 combat library** from its Gauntlets and Dual Axes animations, reducing the import from ~4.6 MB to ~540 KB. This keeps the basic fighting game fast and avoids importing weapon meshes until we actually add weapon gameplay.
