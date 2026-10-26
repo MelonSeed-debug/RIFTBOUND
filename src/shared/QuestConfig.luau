@@ -7,27 +7,27 @@ return {
 		"FirstSpark", "MarketWhispers", "FoundrySecret", "VeilVoices", "AbyssHeart"},
 	Quests = {
 		FirstSpark = {
-			Name="The First Spark",Description="Speak with Dr. Liora in Haven to learn about supplies.",
+			Name="The First Spark",Description="Speak with Dr. Liora at the training field to learn about supplies.",
 			RequiredLevel=1,Target="Talk:DrLiora",Count=1,
 			XP=90,Coins=65,Repeatable=false,Category="Story",
 		},
 		MarketWhispers = {
-			Name="Shadows on the Market",Description="Find Kestrel in the Old Quarter night market.",
+			Name="Shadows on the Market",Description="Find Kestrel at the temporary training field.",
 			RequiredLevel=3,PrerequisiteQuest="FirstSpark",Target="Talk:Kestrel",Count=1,
 			XP=220,Coins=90,Repeatable=false,Category="Story",
 		},
 		FoundrySecret = {
-			Name="The Foundry Secret",Description="Question Foreman Brass in Ironworks.",
+			Name="The Foundry Secret",Description="Question Foreman Brass at the temporary training field.",
 			RequiredLevel=10,PrerequisiteQuest="MarketWhispers",Target="Talk:ForemanBrass",Count=1,
 			XP=470,Coins=155,Repeatable=false,Category="Story",
 		},
 		VeilVoices = {
-			Name="Voices of the Veil",Description="Find Oracle Nyx in the Rift Expanse.",
+			Name="Voices of the Veil",Description="Speak with Oracle Nyx at the temporary training field.",
 			RequiredLevel=25,PrerequisiteQuest="FoundrySecret",Target="Talk:OracleNyx",Count=1,
 			XP=920,Coins=275,Repeatable=false,Category="Story",
 		},
 		AbyssHeart = {
-			Name="Heart of the Abyss",Description="Defeat the Abyss Warden inside the Rift Citadel dungeon.",
+			Name="Heart of the Abyss",Description="Defeat the optional Abyss Warden in the separate training-field dungeon.",
 			RequiredLevel=25,PrerequisiteQuest="VeilVoices",Target="Abyss Warden",Count=1,
 			XP=2400,Coins=850,Repeatable=false,Category="Story",
 		},
