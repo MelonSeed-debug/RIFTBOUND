@@ -232,6 +232,9 @@ function QuestBoard.Init(player, gui)
 		message.Text = "Quest service connecting... Check Rojo sync."
 		warn("[RIFTBOUND Quests] Quest journal loaded, but QuestRequest is missing. Verify default.project.json and Rojo.")
 	end
+	panel:GetPropertyChangedSignal("Visible"):Connect(function()
+		if panel.Visible then refresh() end
+	end)
 	toggle.Activated:Connect(function()
 		panel.Visible = not panel.Visible
 		refresh()
