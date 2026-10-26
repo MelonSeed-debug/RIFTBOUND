@@ -17,6 +17,8 @@ local started = false
 local TYPES = {
 	{ Name = "Street Brawler", Offset = Vector3.new(-12, 0, -24), Color = Color3.fromRGB(236, 112, 87), GuardChance = 0.13, Health = cfg.Health },
 	{ Name = "Street Guard", Offset = Vector3.new(12, 0, -24), Color = Color3.fromRGB(89, 159, 238), GuardChance = 0.58, Health = cfg.Health + 40 },
+	{ Name = "Rift Sentinel", Offset = Vector3.new(0, 0, -57), Color = Color3.fromRGB(160, 78, 243),
+		GuardChance = 0.38, Health = 450, AttackDamage = 17, AttackCooldown = 1.65, WalkSpeed = 13 },
 }
 
 local function floorPosition(x, z, fallbackY, ignore)
@@ -229,7 +231,7 @@ local function attemptAttack(model, humanoid, root, player, targetCharacter, tar
 			end
 			return
 		end
-		local amount = cfg.AttackDamage
+		local amount = model:GetAttribute("RiftNPCAttackDamage") or cfg.AttackDamage
 		if (model:GetAttribute("Pill_AdrenalineRush") or 0) > os.clock() then amount *= 1.2 end
 		if (model:GetAttribute("Pill_AntiInflammatory") or 0) > os.clock() then amount *= 0.95 end
 		if (model:GetAttribute("FrenzyEuphoriaEnds") or 0) > Workspace:GetServerTimeNow() then amount *= 0.9 end
@@ -278,7 +280,7 @@ local function runAI(model, humanoid, root, home, definition, hooks)
 						root.CFrame = CFrame.lookAt(root.Position, flat)
 					end
 					if current >= nextAttack and model:GetAttribute("RiftBlocking") ~= true then
-						nextAttack = current + cfg.AttackCooldown
+						nextAttack = current + (definition.AttackCooldown or cfg.AttackCooldown)
 						attemptAttack(model, humanoid, root, player, targetCharacter, targetHumanoid, targetRoot, hooks)
 					end
 				end
@@ -315,7 +317,8 @@ local function spawnOne(folder, center, definition, hooks)
 	model:SetAttribute("RiftNPCStunnedUntil", 0)
 	humanoid.MaxHealth = definition.Health
 	humanoid.Health = definition.Health
-	humanoid.WalkSpeed = cfg.WalkSpeed
+	humanoid.WalkSpeed = definition.WalkSpeed or cfg.WalkSpeed
+	model:SetAttribute("RiftNPCAttackDamage", definition.AttackDamage or cfg.AttackDamage)
 	humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
 	humanoid.AutoRotate = true
 	for _, child in model:GetDescendants() do
@@ -376,7 +379,7 @@ function NPCs.Start(hooks)
 			if not ok then warn("[RIFTBOUND NPC] Spawn failed for", definition.Name, err) end
 		end)
 	end
-	print("[RIFTBOUND NPC] Starting two Studio enemies near spawn.")
+	print("[RIFTBOUND NPC] Starting Street Brawler, Street Guard and Rift Sentinel.")
 end
 
 return NPCs
