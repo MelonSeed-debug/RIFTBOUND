@@ -20,7 +20,7 @@ local nextAllowed=0
 local specialSpawned=false
 local arenaCenter=Vector3.new(1435,0,-235)
 local entrance=Vector3.new(1435,0,-175)
-local sigilGate=Vector3.new(452,0,-462)
+local sigilGate=Vector3.new(86,0,-51) -- optional challenge portal near field edge
 local rpc
 local memberCheck=setmetatable({}, {__mode="k"})
 
@@ -247,8 +247,8 @@ local function buildRoom()
 	sign(exit,"RETURN TO RIFT EXPANSE")
 	prompt(exit,"ABYSS CITADEL","Leave Dungeon",function(player)
 		if not inDungeon(player) then return end
-		if teleport(player,Vector3.new(350,0,-339)) then
-			send(player,"Message","Returned to Rift Expanse.")
+		if teleport(player,Vector3.new(63,0,-49)) then
+			send(player,"Message","Returned to the practice field.")
 		end
 	end)
 end
