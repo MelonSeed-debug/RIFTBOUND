@@ -259,6 +259,13 @@ end
 function Motion.Play(character, effect, value)
 	if not character or not character.Parent then return end
 	local sword = character:GetAttribute("RiftSwordEquipped") == true
+	if effect == "SwordGuardEnd" then
+		local state = getState(character)
+		if state.tracks.SwordBlock and state.tracks.SwordBlock.IsPlaying then
+			state.tracks.SwordBlock:Stop(0.12)
+		end
+		return
+	end
 	local move
 	if effect == "Swing" then
 		move = (sword and "SwordM1_" or "M1_")
