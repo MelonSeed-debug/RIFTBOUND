@@ -42,9 +42,35 @@ if ashleyModule then
 	if ok and type(loaded) == "table" then AshleyMoves = loaded
 	else warn("[RIFTBOUND] Ashley moves unavailable:", loaded) end
 end
+-- Optional registry-driven selection: failure must not disable combat or the dummy.
+local Selection = {Initialize = function(player) player:SetAttribute("EquippedSpec", "None") end, Request = function() return false end, Remove = function() end}
+local selectionModule = script:FindFirstChild("SpecSelection") or script:WaitForChild("SpecSelection", 3)
+if selectionModule and selectionModule:IsA("ModuleScript") then
+	local ok, loaded = pcall(require, selectionModule)
+	if ok and type(loaded) == "table" then
+		Selection = loaded
+	else
+		warn("[RIFTBOUND] Spec selection unavailable:", loaded)
+	end
+else
+	warn("[RIFTBOUND] Missing SpecSelection; base combat is still available.")
+end
 local specRequest = rift.Remotes:WaitForChild("SpecRequest", 5)
 if specRequest then
-	specRequest.OnServerEvent:Connect(function(player, action)
+	specRequest.OnServerEvent:Connect(function(player, action, requestedId)
+		if typeof(action) ~= "string" then return end
+		if action == "EquipSpec" or action == "UnequipSpec" then
+			local changed = Selection.Request(player, action, requestedId)
+			if changed then
+				local character = player.Character
+				if character then
+					Shield.Clear(character)
+					Buzz.Clear(character)
+					if AshleyMoves.StopPlayerBuffs then AshleyMoves.StopPlayerBuffs(player) end
+				end
+			end
+			return
+		end
 		if action == "PillShield" then Shield.Activate(player)
 		elseif action == "BuzzBoost" then Buzz.Activate(player)
 		elseif action == "RaveRush" then AshleyMoves.Cast(player, "C")
@@ -255,8 +281,8 @@ end)
 
 local function setup(player)
 	getState(player)
-	-- Draft testing: give Ashley to testers in Studio until Spec selection is implemented.
-	if game:GetService("RunService"):IsStudio() then player:SetAttribute("EquippedSpec", "AshleySimmons") end
+	-- Default to Unarmed; Ashley is granted as an unlocked starter Spec.
+	Selection.Initialize(player)
 	PillPassive.Reset(player)
 	Shield.ResetPlayer(player)
 	Buzz.ResetPlayer(player)
@@ -276,7 +302,10 @@ local function setup(player)
 end
 Players.PlayerAdded:Connect(setup)
 for _,player in Players:GetPlayers() do setup(player) end
-Players.PlayerRemoving:Connect(function(player) states[player]=nil end)
+Players.PlayerRemoving:Connect(function(player)
+	states[player] = nil
+	Selection.Remove(player)
+end)
 
 if game:GetService("RunService"):IsStudio() then
 	local dummy = Instance.new("Model")
