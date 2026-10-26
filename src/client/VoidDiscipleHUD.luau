@@ -1,56 +1,57 @@
 --!strict
--- Void Disciple cooldown indicators, visible only while Void Disciple is equipped.
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local spec = require(ReplicatedStorage.Riftbound.Shared.VoidDiscipleSpec)
-local HUD = {}
+-- Void Disciple cooldowns live in a responsive center-top skill dock instead of
+-- overlapping the red/blue/green combat bars at the bottom-left.
+local ReplicatedStorage=game:GetService("ReplicatedStorage")
+local Deco=require(script.Parent.ArtDecoUI)
+local cfg=require(ReplicatedStorage.Riftbound.Shared.VoidDiscipleSpec)
+local HUD={}
 
-function HUD.Init(player, gui)
-	local rows = {}
-	local order = {"Z", "X", "C", "V", "G"}
-	for i, key in order do
-		local ability = spec.Abilities[key]
-		local label = Instance.new("TextLabel")
-		label.Name = "Void" .. key .. "Cooldown"
-		label.Size = UDim2.fromOffset(250, 31)
-		label.Position = UDim2.new(0, 15, 1, -138 - (i - 1) * 38)
-		label.BackgroundColor3 = Color3.fromRGB(31, 20, 58)
-		label.BackgroundTransparency = 0.12
-		label.TextColor3 = Color3.fromRGB(185, 146, 255)
-		label.Font = Enum.Font.GothamBold
-		label.TextSize = 15
-		label.Text = key .. " " .. string.upper(ability.Name)
-		label.Visible = false
-		label.Parent = gui
-		rows[key] = label
+function HUD.Init(player,gui)
+	local dock=Instance.new("Frame")
+	dock.Name="VoidAbilityDock"
+	dock.AnchorPoint=Vector2.new(0.5,0)
+	dock.Position=UDim2.new(0.5,0,0,143)
+	dock.Size=UDim2.fromOffset(566,77)
+	dock.Visible=false
+	dock.Parent=gui
+	Deco.Panel(dock)
+
+	local scale=Instance.new("UIScale")
+	scale.Name="ResponsiveAbilityScale"
+	scale.Parent=dock
+
+	local rows={}
+	local order={"Z","X","C","V","G"}
+	for i,key in order do
+		local ability=cfg.Abilities[key]
+		local cell=Deco.Card(dock,"Void"..key.."Cell",
+			UDim2.fromOffset(10+(i-1)*111,11),UDim2.fromOffset(105,45))
+		local label=Deco.Text(cell,"Caption",key.."  "..string.upper(ability.Name),
+			UDim2.fromOffset(5,3),UDim2.fromOffset(96,21),11,true)
+		label.TextXAlignment=Enum.TextXAlignment.Center
+		label.TextScaled=true
+		local cooldown=Deco.Text(cell,"Cooldown","READY",
+			UDim2.fromOffset(5,23),UDim2.fromOffset(96,17),11,true)
+		cooldown.TextXAlignment=Enum.TextXAlignment.Center
+		rows[key]={Title=label,State=cooldown}
 	end
-
-	local mark = Instance.new("TextLabel")
-	mark.Name = "VoidPassiveHint"
-	mark.Size = UDim2.fromOffset(245, 34)
-	mark.Position = UDim2.new(0, 15, 1, -100)
-	mark.BackgroundColor3 = Color3.fromRGB(46, 23, 74)
-	mark.BackgroundTransparency = 0.1
-	mark.TextColor3 = Color3.fromRGB(231, 196, 255)
-	mark.Font = Enum.Font.GothamBold
-	mark.TextSize = 14
-	mark.Text = "PASSIVE: VOID MARK (3 HITS)"
-	mark.Visible = false
-	mark.Parent = gui
+	local passive=Deco.Text(dock,"Passive","PASSIVE   •   VOID MARK: 3 HITS",
+		UDim2.fromOffset(12,59),UDim2.new(1,-24,0,15),10,false)
+	passive.TextXAlignment=Enum.TextXAlignment.Center
 
 	task.spawn(function()
 		while gui.Parent do
-			local usingVoid = player:GetAttribute("EquippedSpec") == spec.Id
-			local now = workspace:GetServerTimeNow()
-			for key, label in rows do
-				label.Visible = usingVoid
-				if usingVoid then
-					local remaining = math.max(0, math.ceil((player:GetAttribute("Void" .. key .. "ReadyAt") or 0) - now))
-					local title = string.upper(spec.Abilities[key].Name)
-					label.Text = key .. "  " .. title .. (remaining > 0 and ("  " .. remaining .. "s") or "  READY")
+			local isVoid=player:GetAttribute("EquippedSpec")==cfg.Id
+			dock.Visible=isVoid
+			if isVoid then
+				local now=workspace:GetServerTimeNow()
+				for key,cell in rows do
+					local left=math.max(0,math.ceil((player:GetAttribute("Void"..key.."ReadyAt") or 0)-now))
+					cell.State.Text=left>0 and (tostring(left).."s") or "READY"
+					cell.State.TextColor3=left>0 and Deco.Muted or Deco.Green
 				end
 			end
-			mark.Visible = usingVoid
-			task.wait(0.15)
+			task.wait(0.18)
 		end
 	end)
 end
