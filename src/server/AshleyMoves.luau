@@ -293,13 +293,14 @@ function Moves.StopPlayerBuffs(player)
 	local character = player.Character
 	if not character then return end
 	local s = state(player)
+	local hadRush = (character:GetAttribute("RaveRushEnds") or 0) > now()
 	s.rush += 1 -- Invalidate the active Rave Rush timeout.
 	character:SetAttribute("RaveRushEnds", 0)
 	local root = character:FindFirstChild("HumanoidRootPart")
 	local emitter = root and root:FindFirstChild("RaveRushTrail")
 	if emitter then emitter:Destroy() end
 	local humanoid = character:FindFirstChildOfClass("Humanoid")
-	if humanoid and humanoid.Health > 0 then
+	if hadRush and humanoid and humanoid.Health > 0 then
 		humanoid.WalkSpeed = character:GetAttribute("RiftBlocking") == true and combat.Block.WalkSpeed or combat.BaseWalkSpeed
 	end
 end
