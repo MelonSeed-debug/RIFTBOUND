@@ -66,7 +66,11 @@ function Menu.Init(player, request, gui)
 	panel.Name = "SpecSelection"
 	panel.AnchorPoint = Vector2.new(0.5, 0.5)
 	panel.Position = UDim2.fromScale(0.5, 0.47)
-	panel.Size = UDim2.fromOffset(380, 335)
+	panel.Size = UDim2.new(0.94, 0, 0, 335)
+	local sizeLimit = Instance.new("UISizeConstraint")
+	sizeLimit.MaxSize = Vector2.new(380, 335)
+	sizeLimit.MinSize = Vector2.new(290, 335)
+	sizeLimit.Parent = panel
 	panel.BackgroundColor3 = colors.background
 	panel.BorderSizePixel = 0
 	panel.Visible = false
