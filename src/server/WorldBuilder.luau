@@ -270,7 +270,6 @@ local function createGeometry()
 	-- This can run in Studio Edit Mode without starting the game.
 	-- Save the place once, then Studio and published servers reuse these parts.
 	readOrigin(nil)
-	hideBaseplate()
 	local existing=Workspace:FindFirstChild(World.WorldName)
 	if existing then
 		if (existing:GetAttribute("Version") or 0)>=World.Version then
@@ -283,7 +282,6 @@ local function createGeometry()
 		existing:Destroy()
 	end
 	local root=group(Workspace,World.WorldName)
-	root:SetAttribute("Version",World.Version)
 	root:SetAttribute("GroundY",groundY)
 	root:SetAttribute("SpawnX",origin.X)
 	root:SetAttribute("SpawnZ",origin.Z)
@@ -302,6 +300,9 @@ local function createGeometry()
 	Visuals.Build(api,root)
 	local travel=group(root,"05 FAST TRAVEL / LEVEL-GATED")
 	buildTravel(travel)
+	-- Set version last: incomplete builds will be regenerated rather than
+	-- mistaken for successfully baked maps after an interrupted Studio run.
+	root:SetAttribute("Version",World.Version)
 	builtFolder=root
 	print("[RIFTBOUND World] CONCEPT MAP v"..World.Version..
 		" created: 4 islands, 4 bridges, Haven nexus, city, foundries, Rift citadel.")
@@ -402,6 +403,7 @@ end
 -- Once baked the map is real, editable Workspace geometry (and can be moved).
 function Builder.Bake()
 	local root,created=createGeometry()
+	hideBaseplate()
 	atmosphere()
 	return root,created
 end
