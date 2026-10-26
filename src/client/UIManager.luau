@@ -95,14 +95,6 @@ function Manager.Init(_,gui)
 		local progress=gui:FindFirstChild("ProgressionHUD")
 		applyScale(progress,math.min(1,math.max(0.55,(w-180)/320)),"ResponsiveStatsScale")
 
-		local mastery=gui:FindFirstChild("RiftMasteryHUD")
-		if mastery then
-			local scale=math.min(1,math.max(0.58,(w-180)/320))
-			if h<690 then scale=math.min(scale,math.clamp((h-500)/170,0.54,1)) end
-			applyScale(mastery,scale,"ResponsiveMasteryScale")
-			mastery.Position=UDim2.fromOffset(15,157)
-		end
-
 		local vitals=gui:FindFirstChild("ArtDecoVitals")
 		if vitals then
 			local scale=math.min(1,math.max(0.57,(w-180)/325))
