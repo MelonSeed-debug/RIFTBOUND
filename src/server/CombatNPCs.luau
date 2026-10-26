@@ -204,6 +204,12 @@ local function attemptAttack(model, humanoid, root, player, targetCharacter, tar
 		if player.Character ~= targetCharacter or not targetRoot.Parent or targetHumanoid.Health <= 0 then return end
 		local difference = targetRoot.Position - root.Position
 		if difference.Magnitude > cfg.AttackRange + 0.75 or difference.Magnitude < 0.1 then return end
+		-- Walls and solid obstacles interrupt attacks; the server decides hit validity.
+		local rayParams = RaycastParams.new()
+		rayParams.FilterType = Enum.RaycastFilterType.Exclude
+		rayParams.FilterDescendantsInstances = {model}
+		local obstacle = Workspace:Raycast(root.Position, difference, rayParams)
+		if obstacle and not obstacle.Instance:IsDescendantOf(targetCharacter) then return end
 
 		if model:GetAttribute("FrenzyNausea") == true then
 			model:SetAttribute("FrenzyNausea", nil)
