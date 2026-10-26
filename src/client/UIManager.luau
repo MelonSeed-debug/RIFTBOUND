@@ -7,12 +7,10 @@ local Workspace=game:GetService("Workspace")
  
 local Manager={}
 local MODALS={
-	RiftMainMenu={W=575,H=540},
+	RiftMainMenu={W=575,H=492},
 	DecoInventory={W=530,H=515},
 	QuestJournal={W=430,H=470},
 	SpecSelection={W=380,H=408},
-	RiftboundWorldMap={W=720,H=496},
-	WorldGuide={W=390,H=330},
 	RiftStoryDialogue={W=650,H=274},
 }
 
@@ -38,7 +36,6 @@ function Manager.Init(_,gui)
 		OpenSpecs=true,
 		OpenQuestLog=true,
 		InventoryToggle=true,
-		WorldMapButton=true,
 	}
 	local processing=false
 
@@ -75,12 +72,8 @@ function Manager.Init(_,gui)
 		local size=camera.ViewportSize
 		local w,h=size.X,size.Y
 		local compact=w<730
-		local contentLeft=15+math.min(320,math.max(180,w-180))
-		local contentRight=w-164
-		local gap=math.max(0,contentRight-contentLeft)
-		local contentCenter=(contentLeft+contentRight)/2
 
-		-- Inventory, quests, Specs, world guide, map and dialogue cannot
+		-- Inventory, quests, Specs and dialogue cannot
 		-- stack over one another, and scale to fit viewport height.
 		for panel in watched do
 			if panel.Parent then
@@ -103,33 +96,6 @@ function Manager.Init(_,gui)
 				and UDim2.new(0,15,0,276)
 				or (h<580 and UDim2.new(0,15,0,250)
 					or UDim2.new(0,15,1,-176))
-		end
-
-		local header=gui:FindFirstChild("WorldGuideToggle")
-		local map=gui:FindFirstChild("WorldMapButton")
-		if compact then
-			-- On phones, put navigation underneath Specs, quests and inventory
-			-- instead of over the two left-side stat panels.
-			if header then
-				header.AnchorPoint=Vector2.zero
-				header.Position=UDim2.new(1,-155,0,221)
-				applyScale(header,0.69,"ResponsiveWorldScale")
-			end
-			if map then
-				map.Position=UDim2.new(1,-155,0,276)
-				applyScale(map,0.95,"ResponsiveMapScale")
-			end
-		else
-			local navScale=math.min(1,math.max(0.5,gap/335))
-			if header then
-				header.AnchorPoint=Vector2.new(0.5,0)
-				header.Position=UDim2.fromOffset(contentCenter,17)
-				applyScale(header,navScale,"ResponsiveWorldScale")
-			end
-			if map then
-				map.Position=UDim2.fromOffset(contentCenter-68,88)
-				applyScale(map,math.min(1,math.max(0.6,gap/140)),"ResponsiveMapScale")
-			end
 		end
 
 		-- The skills sidebar stays pinned to the RIGHT edge, never centered
