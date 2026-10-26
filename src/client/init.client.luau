@@ -9,8 +9,8 @@ local RunService = game:GetService("RunService")
 local rift = ReplicatedStorage:WaitForChild("Riftbound")
 local request = rift.Remotes.CombatRequest
 local fx = rift.Remotes.CombatFX
-local specFX = rift.Remotes:FindFirstChild("SpecFX")
-local specRequest = rift.Remotes:FindFirstChild("SpecRequest")
+local specFX = rift.Remotes:WaitForChild("SpecFX", 5)
+local specRequest = rift.Remotes:WaitForChild("SpecRequest", 5)
 -- Optional animation layer must not disable combat inputs.
 local Motion = {Play = function() end}
 local motionModule = script:FindFirstChild("CombatAnimations") or script:WaitForChild("CombatAnimations", 3)
