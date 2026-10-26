@@ -43,8 +43,8 @@ local CombatConfig = {
 	},
 
 	NPC = {
-		Enabled = true,
-		StudioOnly = false, -- Real world encounters now spawn in the published world too.
+		Enabled = false, -- No automatic bandit patrols during the flat-grass prototype.
+		StudioOnly = false, -- Opt-in scripted bosses remain possible via SpawnCustom.
 		DetectRange = 40,
 		LeashRange = 58,
 		AttackRange = 5.6,
