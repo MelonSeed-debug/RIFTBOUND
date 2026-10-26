@@ -120,6 +120,7 @@ label.TextColor3 = Color3.fromRGB(255,255,255)
 label.Font = Enum.Font.GothamBold
 label.TextSize = 13
 label.Text = "RIFTBOUND  |  M1  R Heavy  F Block  Q Dash  Z X C V G Skills"
+label.Name = "ControlsHint"
 label.Parent = gui
 
 -- Optional progression HUD. If it fails to sync, combat controls still work.
@@ -217,6 +218,9 @@ else
 	warn("[RIFTBOUND] Spec menu unavailable; combat controls still active.")
 end
 
+
+-- All large windows are mutually exclusive and panels adjust for the viewport.
+loadOptionalUI("UIManager")
 
 -- Phase 1 combat feedback. Visuals are cosmetic and never determine damage.
 local comboLabel = Instance.new("TextLabel")
