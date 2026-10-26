@@ -6,6 +6,21 @@ local Workspace = game:GetService("Workspace")
 
 local rift = ReplicatedStorage:WaitForChild("Riftbound")
 local config = require(rift.Shared.CombatConfig)
+-- Optional progression: failure cannot disable the working combat or NPC system.
+local Progression = {AwardNPCDefeat = function() return false end}
+local progressionModule = script:FindFirstChild("Progression") or script:WaitForChild("Progression", 3)
+if progressionModule and progressionModule:IsA("ModuleScript") then
+	local loaded, result = pcall(require, progressionModule)
+	if loaded and type(result) == "table" then
+		Progression = result
+		local started, err = pcall(Progression.Start)
+		if not started then warn("[RIFTBOUND] Progression did not start:", err) end
+	else
+		warn("[RIFTBOUND] Progression failed to load:", result)
+	end
+else
+	warn("[RIFTBOUND] Progression module missing; base combat remains active.")
+end
 -- Combat remains playable even when optional Spec files fail to sync or load.
 local PillPassive = {Reset = function() end, OnHit = function() end}
 local passiveModule = script:FindFirstChild("PillPassive") or script:WaitForChild("PillPassive", 3)
@@ -351,6 +366,9 @@ task.defer(function()
 		IsParrying = function(player)
 			local s = getState(player)
 			return s.blocking == true and os.clock() <= s.parryUntil
+		end,
+		AwardDefeat = function(player, npcName)
+			return Progression.AwardNPCDefeat(player, npcName)
 		end,
 	})
 	if not started then warn("[RIFTBOUND] Combat NPC startup failed:", err) end
