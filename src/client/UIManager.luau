@@ -130,9 +130,7 @@ function Manager.Init(_,gui)
 			end
 			dock.Position=UDim2.fromOffset(contentCenter,147)
 			-- Mobile touch buttons take priority over a full-width cooldown dock.
-			if compact and UserInputService.TouchEnabled then
-				dock:SetAttribute("RiftHideForTouch",true)
-			end
+			dock:SetAttribute("RiftHideInCompact",compact)
 		end
 
 		local hint=gui:FindFirstChild("ControlsHint")
