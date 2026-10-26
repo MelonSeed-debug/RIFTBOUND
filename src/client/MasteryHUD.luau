@@ -70,6 +70,10 @@ function UI.Init(player,gui)
 		player:GetAttributeChangedSignal("SpecMastery_"..id):Connect(refresh)
 	end
 	player:GetAttributeChangedSignal("EquippedSpec"):Connect(refresh)
+	player:GetAttributeChangedSignal("LastLootSerial"):Connect(function()
+		local drop=player:GetAttribute("LastLoot")
+		if typeof(drop)=="string" then toast("LOOT  •  "..drop,Deco.PaleGold) end
+	end)
 	refresh()
 	local remotes=ReplicatedStorage.Riftbound.Remotes
 	local mastery=remotes:WaitForChild("MasteryFX",6)
