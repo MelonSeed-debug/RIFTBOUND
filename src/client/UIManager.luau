@@ -140,16 +140,23 @@ function Manager.Init(_,gui)
 			end
 		end
 
-		local dock=gui:FindFirstChild("VoidAbilityDock")
-		if dock then
-			local scale=dock:FindFirstChild("ResponsiveAbilityScale")
-			if scale then
-				local available=math.max(0,gap-18)
-				scale.Scale=math.clamp(available/566,0.32,1)
+		-- The skills sidebar stays pinned to the RIGHT edge, never centered
+		-- over the crosshair. Its width shrinks to leave breathing room for
+		-- the left health/progression panels, including on smaller screens.
+		local sidebar=gui:FindFirstChild("RiftAbilitySidebar")
+		if sidebar then
+			local scaledWidth=math.clamp((w-380)/332,0.42,1)
+			local scaledHeight=math.clamp((h-175)/431,0.42,1)
+			local scale=sidebar:FindFirstChild("ResponsiveAbilityScale")
+			if scale and scale:IsA("UIScale") then
+				scale.Scale=math.min(scaledWidth,scaledHeight)
 			end
-			dock.Position=UDim2.fromOffset(contentCenter,147)
-			-- Mobile touch buttons take priority over a full-width cooldown dock.
-			dock:SetAttribute("RiftHideInCompact",compact)
+			sidebar.AnchorPoint=Vector2.new(1,0.5)
+			sidebar.Position=UDim2.new(1,-15,0.61,0)
+			-- The existing touch ability buttons remain accessible. The
+			-- read-only sidebar is tucked away on very small touch screens.
+			sidebar:SetAttribute("RiftHideForTouch",
+				game:GetService("UserInputService").TouchEnabled and w<540)
 		end
 
 		local tracker=gui:FindFirstChild("QuestTracker")
