@@ -42,6 +42,24 @@ local CombatConfig = {
 		Cooldown = 1.8,
 	},
 
+	NPC = {
+		Enabled = true,
+		StudioOnly = true, -- Keep hostile NPCs in local test sessions until map/spawns are finalized.
+		DetectRange = 40,
+		LeashRange = 58,
+		AttackRange = 5.6,
+		AttackWindup = 0.55,
+		AttackCooldown = 2.1,
+		AttackDamage = 9,
+		WalkSpeed = 12,
+		GuardWalkSpeed = 6,
+		GuardDuration = 1.1,
+		DecisionInterval = 2.6,
+		RespawnDelay = 5,
+		ThinkInterval = 0.25,
+		Health = 160,
+	},
+	
 	Trainer = {
 		AttackWindup = 0.55,
 		AttackInterval = 3.3,
