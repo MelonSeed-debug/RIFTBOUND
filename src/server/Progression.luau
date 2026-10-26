@@ -10,6 +10,7 @@ local Workspace = game:GetService("Workspace")
 
 local cfg = require(ReplicatedStorage.Riftbound.Shared.LevelConfig)
 local questCfg = require(ReplicatedStorage.Riftbound.Shared.QuestConfig)
+local worldConfig = require(ReplicatedStorage.Riftbound.Shared.WorldConfig)
 local registry = require(ReplicatedStorage.Riftbound.Shared.SpecRegistry)
 local items = require(ReplicatedStorage.Riftbound.Shared.ItemConfig)
 local masteryConfig = require(ReplicatedStorage.Riftbound.Shared.MasteryConfig)
@@ -259,6 +260,11 @@ function Progression.AcceptQuest(player, questId)
 	if not p or not p.loaded or typeof(questId) ~= "string" then return false, "Progress is still loading." end
 	local definition = questCfg.Quests[questId]
 	if not definition then return false, "Unknown quest." end
+	-- Flat-field prototype: repetitive open-world enemy contracts have been
+	-- temporarily retired. Previously saved quests are retained, not wiped.
+	if worldConfig.PracticeMode and definition.Category ~= "Story" then
+		return false, "Combat-grind quests are paused while we redesign progression."
+	end
 	if p.questActive ~= "" then return false, "Finish or abandon your active quest first." end
 	if p.level < definition.RequiredLevel then return false, "Reach level " .. definition.RequiredLevel .. " first." end
 	if definition.PrerequisiteQuest and not p.questCompleted[definition.PrerequisiteQuest] then
