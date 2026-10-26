@@ -1,8 +1,7 @@
 --!strict
--- Prototype Spec selection UI: M on keyboard, or SPECS button on any device.
+-- Spec selection opens from the central M menu (and optional legacy button).
 -- The server validates every equip request. This module never grants ownership.
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local UserInputService = game:GetService("UserInputService")
 local Registry = require(ReplicatedStorage.Riftbound.Shared.SpecRegistry)
 local Deco = require(script.Parent.ArtDecoUI)
 
@@ -57,7 +56,7 @@ local function button(parent, text, size, position, fill, fontSize)
 end
 
 function Menu.Init(player, request, gui)
-	local toggle = button(gui, "SPECS  [M]", UDim2.fromOffset(142, 40), UDim2.new(1, -155, 0, 16), colors.panel, 15)
+	local toggle = button(gui, "SPECS", UDim2.fromOffset(142, 40), UDim2.new(1, -155, 0, 16), colors.panel, 15)
 	toggle.Name = "OpenSpecs"
 	local outline = Instance.new("UIStroke")
 	outline.Color = colors.outline
@@ -185,10 +184,8 @@ function Menu.Init(player, request, gui)
 		panel.Visible = not panel.Visible
 		refresh()
 	end)
-	UserInputService.InputBegan:Connect(function(input, gameProcessed)
-		if gameProcessed or input.KeyCode ~= Enum.KeyCode.M then return end
-		panel.Visible = not panel.Visible
-		refresh()
+	panel:GetPropertyChangedSignal("Visible"):Connect(function()
+		if panel.Visible then refresh() end
 	end)
 	player:GetAttributeChangedSignal("EquippedSpec"):Connect(refresh)
 	player:GetAttributeChangedSignal("SpecUnlocked_AshleySimmons"):Connect(refresh)
@@ -196,7 +193,8 @@ function Menu.Init(player, request, gui)
 	player:GetAttributeChangedSignal("SpecUnlocked_VoidDisciple"):Connect(refresh)
 	player:GetAttributeChangedSignal("Level"):Connect(refresh)
 	refresh()
-	panel.Visible = (player:GetAttribute("EquippedSpec") or Registry.Default) == Registry.Default
+	-- All navigation goes through MENU [M], never force Specs open on spawn.
+	panel.Visible = false
 end
 
 return Menu
