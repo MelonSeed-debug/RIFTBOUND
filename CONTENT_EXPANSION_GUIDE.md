@@ -20,7 +20,7 @@ If you've already baked the island world (Workspace / RIFTBOUND World), keep it;
 | --- | --- |
 | I | Inventory: use healing items, equip gear, view materials |
 | J or P | Quest Journal: accept, abandon, claim missions |
-| M | Equip Ashley Simmons or earned Void Disciple |
+| M | Open the Main Menu (Specs, Quests, Inventory, Map, World Guide, Character, Mastery, Dungeons) |
 | B | World Guide |
 | N | Island Map |
 | Z X C V G | Equipped Spec abilities; C/V/G have mastery thresholds |
@@ -79,6 +79,15 @@ Skill unlocks are based on **total earned mastery XP**, not mastery level direct
 
 The previous v4 saved mastery generated from NPC defeats is migrated once at **2 XP per legacy mastery point**, so existing progress is not abruptly discarded. New saves store `masteryXP` in profile version 5.
 
+## Main Menu & UI contrast fix
+
+- **M** now opens the centralized 8-section Main Menu. Choose Specs there to equip Ashley Simmons or earned Void Disciple.
+- The **SPECS** quick toggle, Quests toggle, Inventory toggle, and Map quick toggle are hidden; direct keyboard shortcuts still work, including I, J/P, B and N.
+- The central menu displays character, mastery and dungeon information without duplicating persistent profile state.
+- Art Deco panels use a white tint base for their dark color gradient (UIGradient multiplies the tint), and the ScreenGui uses Sibling ZIndex layering so modal text/buttons are not hidden beneath their own background.
+- Old Spec selection no longer automatically pops up on spawn.
+- Existing shop dialogue still opens the Buy tab, while the main menu Inventory entry opens the bag.
+
 ## Interface overlap fixes
 
 - Large panels (Inventory, Quests, Specs, Map, World Guide, Story Dialogue) are **mutually exclusive**. Opening one closes the others.
@@ -108,7 +117,7 @@ Storage uses the same key and upgrades the snapshot version to 4 without resetti
 ## Test checklist
 
 - [ ] Red/yellow Output free of module errors at startup
-- [ ] I opens the inventory, J and P both open quests; shop prompts for Dr. Liora and Gilded Broker work
+- [ ] M opens the new main menu and its eight entries work; I opens Inventory and J/P open Quests. Shop prompts for Dr. Liora and Gilded Broker still open the Buy tab.
 - [ ] Buying a bandage removes exactly 35 Rift Coins and adds one bandage
 - [ ] Damaged player can use bandage; full-health player cannot waste it
 - [ ] Equip Iron Grips and verify damage is increased
