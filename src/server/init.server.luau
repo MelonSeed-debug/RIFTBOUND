@@ -57,6 +57,15 @@ if ashleyModule then
 	if ok and type(loaded) == "table" then AshleyMoves = loaded
 	else warn("[RIFTBOUND] Ashley moves unavailable:", loaded) end
 end
+-- Void Disciple skills are independent and only run for unlocked players.
+local Void = {Cast = function() return false end, OnHit = function() end,
+	StopPlayerBuffs = function() end, ClearCharacter = function() end, ResetPlayer = function() end}
+local voidModule = script:FindFirstChild("VoidDiscipleMoves") or script:WaitForChild("VoidDiscipleMoves", 3)
+if voidModule then
+	local ok, loaded = pcall(require, voidModule)
+	if ok and type(loaded) == "table" then Void = loaded
+	else warn("[RIFTBOUND] Void Disciple unavailable:", loaded) end
+end
 -- Optional registry-driven selection: failure must not disable combat or the dummy.
 local Selection = {Initialize = function(player) player:SetAttribute("EquippedSpec", "None") end, Request = function() return false end, Remove = function() end}
 local selectionModule = script:FindFirstChild("SpecSelection") or script:WaitForChild("SpecSelection", 3)
@@ -93,11 +102,15 @@ if specRequest then
 		if action == "EquipSpec" or action == "UnequipSpec" then
 			local changed = Selection.Request(player, action, requestedId)
 			if changed then
+				if Progression.RecordEquip then
+					Progression.RecordEquip(player, player:GetAttribute("EquippedSpec"))
+				end
 				local character = player.Character
 				if character then
 					Shield.Clear(character)
 					Buzz.Clear(character)
 					if AshleyMoves.StopPlayerBuffs then AshleyMoves.StopPlayerBuffs(player) end
+					Void.StopPlayerBuffs(player)
 				end
 			end
 			return
@@ -106,7 +119,12 @@ if specRequest then
 		elseif action == "BuzzBoost" then Buzz.Activate(player)
 		elseif action == "RaveRush" then AshleyMoves.Cast(player, "C")
 		elseif action == "TrippyToss" then AshleyMoves.Cast(player, "V")
-		elseif action == "Frenzy" then AshleyMoves.Cast(player, "G") end
+		elseif action == "Frenzy" then AshleyMoves.Cast(player, "G")
+		elseif action == "VoidGuard" then Void.Cast(player, "Z")
+		elseif action == "VoidStep" then Void.Cast(player, "X")
+		elseif action == "VoidGrasp" then Void.Cast(player, "C")
+		elseif action == "VoidCleave" then Void.Cast(player, "V")
+		elseif action == "VoidNova" then Void.Cast(player, "G") end
 	end)
 end
 local request = rift.Remotes.CombatRequest
@@ -195,6 +213,7 @@ local function m1(player)
 						else
 							Shield.Damage(model, targetHum, config.M1.Damages[combo], player)
 							PillPassive.OnHit(player, model)
+							Void.OnHit(player, model)
 							if combo == 4 and not targetRoot.Anchored then
 								targetRoot.AssemblyLinearVelocity = liveRoot.CFrame.LookVector * config.M1.FinisherKnockback + Vector3.new(0,12,0)
 							end
@@ -266,6 +285,7 @@ local function heavy(player)
 							else
 								Shield.Damage(target, hum, config.Heavy.Damage, player)
 								PillPassive.OnHit(player, target)
+								Void.OnHit(player, target)
 								if not targetRoot.Anchored then targetRoot.AssemblyLinearVelocity=currentRoot.CFrame.LookVector*config.Heavy.Knockback end
 								fx:FireAllClients("Hit",target,5,config.Heavy.Damage)
 							end
@@ -321,6 +341,7 @@ local function setup(player)
 	Shield.ResetPlayer(player)
 	Buzz.ResetPlayer(player)
 	AshleyMoves.ResetPlayer(player)
+	Void.ResetPlayer(player)
 	player.CharacterAdded:Connect(function(character)
 		local s = getState(player)
 		s.combo,s.lastHit,s.nextM1,s.nextDash = 0,0,0,0
@@ -330,6 +351,7 @@ local function setup(player)
 		Shield.Clear(character)
 		Buzz.Clear(character)
 		AshleyMoves.ClearCharacter(character)
+		Void.ClearCharacter(character)
 		PillPassive.Reset(player)
 	end)
 	if player.Character then player.Character:SetAttribute("RiftBlocking",false) end
