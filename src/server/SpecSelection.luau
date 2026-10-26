@@ -27,6 +27,8 @@ function Selection.Request(player, action, requestedId)
 		if typeof(requestedId) ~= "string" or #requestedId > 60 then return false end
 		local definition = Registry.Specs[requestedId]
 		if not definition or not definition.Ready then return false end
+		if definition.RequiredLevel and (player:GetAttribute("Level") or 1) < definition.RequiredLevel then return false end
+		if definition.RequiredPermit and player:GetAttribute("QuestPermit_" .. definition.RequiredPermit) ~= true then return false end
 		if player:GetAttribute("SpecUnlocked_" .. requestedId) ~= true then return false end
 		nextId = requestedId
 	end
