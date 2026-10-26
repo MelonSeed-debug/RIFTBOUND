@@ -310,13 +310,13 @@ local function m1(player)
 								fx:FireAllClients("BlockedHit",model,combo)
 							end
 						else
-							Shield.Damage(model, targetHum, sword and sword.M1Damage[combo] or config.M1.Damages[combo], player)
+							Shield.Damage(model, targetHum, sword and sword.M1Damage and sword.M1Damage[combo] or config.M1.Damages[combo], player)
 							PillPassive.OnHit(player, model)
 							Void.OnHit(player, model)
 							if combo == 4 and not targetRoot.Anchored then
 								targetRoot.AssemblyLinearVelocity = liveRoot.CFrame.LookVector * config.M1.FinisherKnockback + Vector3.new(0,12,0)
 							end
-							fx:FireAllClients("Hit",model,combo,sword and sword.M1Damage[combo] or config.M1.Damages[combo])
+							fx:FireAllClients("Hit",model,combo,sword and sword.M1Damage and sword.M1Damage[combo] or config.M1.Damages[combo])
 						end
 					end
 				end
