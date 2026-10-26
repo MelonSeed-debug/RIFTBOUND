@@ -68,7 +68,7 @@ function QuestBoard.Init(player, gui)
 		return true
 	end
 
-	local toggle = button(gui, "QUESTS [J]", UDim2.fromOffset(142, 39), UDim2.new(1, -155, 0, 64), colors.card)
+	local toggle = button(gui, "QUESTS [J/P]", UDim2.fromOffset(142, 39), UDim2.new(1, -155, 0, 64), colors.card)
 	toggle.Name = "OpenQuestLog"
 	local panel = Instance.new("Frame")
 	panel.Name = "QuestJournal"
@@ -242,7 +242,7 @@ function QuestBoard.Init(player, gui)
 			refresh()
 		end
 		return Enum.ContextActionResult.Pass
-	end, false, Enum.KeyCode.J, Enum.KeyCode.ButtonSelect)
+	end, false, Enum.KeyCode.J, Enum.KeyCode.P, Enum.KeyCode.ButtonSelect)
 	print("[RIFTBOUND Quests] Quest journal initialized. Press J to open.")
 end
 
