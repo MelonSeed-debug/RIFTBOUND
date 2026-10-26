@@ -173,6 +173,9 @@ function Menu.Init(player,gui)
 				local target=gui:FindFirstChild(option.target)
 				if target and target:IsA("GuiObject") then
 					detail.Visible=false
+					if option.target=="DecoInventory" then
+						target:SetAttribute("OpenFromMainMenu",true)
+					end
 					panel.Visible=false
 					target.Visible=true
 				else
