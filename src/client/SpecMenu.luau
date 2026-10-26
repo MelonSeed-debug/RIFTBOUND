@@ -66,10 +66,10 @@ function Menu.Init(player, request, gui)
 	panel.Name = "SpecSelection"
 	panel.AnchorPoint = Vector2.new(0.5, 0.5)
 	panel.Position = UDim2.fromScale(0.5, 0.47)
-	panel.Size = UDim2.new(0.94, 0, 0, 335)
+	panel.Size = UDim2.new(0.94, 0, 0, 408)
 	local sizeLimit = Instance.new("UISizeConstraint")
-	sizeLimit.MaxSize = Vector2.new(380, 335)
-	sizeLimit.MinSize = Vector2.new(290, 335)
+	sizeLimit.MaxSize = Vector2.new(380, 408)
+	sizeLimit.MinSize = Vector2.new(290, 408)
 	sizeLimit.Parent = panel
 	panel.BackgroundColor3 = colors.background
 	panel.BorderSizePixel = 0
@@ -104,9 +104,21 @@ function Menu.Init(player, request, gui)
 	local equip = button(specCard, "EQUIP ASHLEY", UDim2.new(1, -26, 0, 32), UDim2.fromOffset(13, 100), colors.accent, 15)
 	equip.TextColor3 = colors.background
 
-	local unarmed = button(panel, "GO UNARMED", UDim2.new(1, -44, 0, 37), UDim2.fromOffset(22, 233), colors.panel, 15)
-	local status = label(panel, "", UDim2.new(1, -44, 0, 24), UDim2.fromOffset(22, 277), 13, colors.secondary, true)
-	local footer = label(panel, "Other Specs and unlock quests are coming later.", UDim2.new(1, -44, 0, 20), UDim2.fromOffset(22, 305), 11, colors.muted, false)
+	local upcoming = Instance.new("Frame")
+	upcoming.Name = "FutureSpec"
+	upcoming.Size = UDim2.new(1, -44, 0, 57)
+	upcoming.Position = UDim2.fromOffset(22, 229)
+	upcoming.BorderSizePixel = 0
+	upcoming.BackgroundColor3 = colors.panel
+	round(upcoming, 9)
+	upcoming.Parent = panel
+	label(upcoming, "VOID DISCIPLE  /  COMING SOON", UDim2.new(1,-20,0,26),
+		UDim2.fromOffset(12,3), 14, colors.secondary, true)
+	local permitHint = label(upcoming, "Requires Level 10 + Rift Initiation quest",
+		UDim2.new(1,-20,0,22), UDim2.fromOffset(12,28), 12, colors.muted, false)
+	local unarmed = button(panel, "GO UNARMED", UDim2.new(1, -44, 0, 37), UDim2.fromOffset(22, 295), colors.panel, 15)
+	local status = label(panel, "", UDim2.new(1, -44, 0, 24), UDim2.fromOffset(22, 340), 13, colors.secondary, true)
+	local footer = label(panel, "Complete quests to unlock future Specs.", UDim2.new(1, -44, 0, 20), UDim2.fromOffset(22, 374), 11, colors.muted, false)
 
 	local function refresh()
 		local equipped = player:GetAttribute("EquippedSpec") or Registry.Default
@@ -127,6 +139,9 @@ function Menu.Init(player, request, gui)
 		end
 		unarmed.Text = equipped == Registry.Default and "CURRENTLY UNARMED" or "UNEQUIP / GO UNARMED"
 		unarmed.Active = equipped ~= Registry.Default
+		permitHint.Text = (player:GetAttribute("QuestPermit_RiftInitiate") == true)
+			and "Rift Initiate permit earned - gameplay coming soon"
+			or "Requires Level 10 + Rift Initiation quest"
 	end
 
 	equip.Activated:Connect(function()
@@ -150,6 +165,7 @@ function Menu.Init(player, request, gui)
 	end)
 	player:GetAttributeChangedSignal("EquippedSpec"):Connect(refresh)
 	player:GetAttributeChangedSignal("SpecUnlocked_AshleySimmons"):Connect(refresh)
+	player:GetAttributeChangedSignal("QuestPermit_RiftInitiate"):Connect(refresh)
 	refresh()
 	panel.Visible = (player:GetAttribute("EquippedSpec") or Registry.Default) == Registry.Default
 end
