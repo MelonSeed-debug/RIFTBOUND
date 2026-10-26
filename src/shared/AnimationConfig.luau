@@ -18,6 +18,14 @@ return {
 		Heavy = 2.92,
 		Dash = 4.0, DashLeft = 4.3, DashRight = 4.3, DashBack = 3.43,
 		Parry = 1.5,
+		-- Great Sword marker timings measured from the source KeyframeSequences:
+		-- M1: 0.65/0.65/0.583/0.633s, Heavy: first hit 1.233s,
+		-- DashAttack: 0.4s, UpTilt: 0.54s, AirSlam: 0.422s, M5: 0.633s.
+		SwordM1_1 = 5.42, SwordM1_2 = 5.42,
+		SwordM1_3 = 4.86, SwordM1_4 = 5.28,
+		SwordHeavy = 3.43, SwordDashAttack = 2.5,
+		SwordUplift = 2.08, SwordSlam = 1.0,
+		SwordExecution = 1.02,
 	},
 	Moves = {
 		M1_1 = "",
@@ -41,5 +49,21 @@ return {
 		Clash = "",
 		Idle = "",
 		Walk = "",
+		-- Abyssal Covenant Great Sword: original R15 sword animations.
+		SwordM1_1 = "",
+		SwordM1_2 = "",
+		SwordM1_3 = "",
+		SwordM1_4 = "",
+		SwordHeavy = "",
+		SwordBlock = "",
+		SwordParry = "",
+		SwordParried = "",
+		SwordDashAttack = "",
+		SwordUplift = "",
+		SwordSlam = "",
+		SwordExecution = "",
+		SwordIdle = "",
+		SwordWalk = "",
+		SwordRun = "",
 	},
 }
