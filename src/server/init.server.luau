@@ -280,6 +280,7 @@ local function m1(player)
 	task.delay(sword and sword.M1Windup or config.M1.Windup, function()
 		local liveChar, _, liveRoot = alive(player)
 		if liveChar ~= character or not liveRoot then return end
+		if sword and player:GetAttribute("EquippedSpec") ~= "GreatSword" then return end
 		local range = sword and sword.M1Range or config.M1.Range
 		local width = sword and sword.M1Width or config.M1.Width
 		local size = Vector3.new(width, config.M1.Height, range)
@@ -347,6 +348,7 @@ local function heavy(player)
 	task.delay(sword and sword.HeavyWindup or config.Heavy.Windup,function()
 		local current, _, currentRoot = alive(player)
 		if current ~= character or not currentRoot or os.clock() < s.stunnedUntil then return end
+		if sword and player:GetAttribute("EquippedSpec") ~= "GreatSword" then return end
 		local params = OverlapParams.new()
 		params.FilterType = Enum.RaycastFilterType.Exclude
 		params.FilterDescendantsInstances = {character}
