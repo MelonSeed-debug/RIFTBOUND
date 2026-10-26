@@ -6,6 +6,21 @@ local Workspace = game:GetService("Workspace")
 
 local rift = ReplicatedStorage:WaitForChild("Riftbound")
 local config = require(rift.Shared.CombatConfig)
+
+-- Generate the Studio world synchronously BEFORE quests and NPCs spawn.
+-- The map is optional and a failure never interrupts combat.
+local worldModule = script:FindFirstChild("WorldBuilder") or script:WaitForChild("WorldBuilder", 3)
+if worldModule and worldModule:IsA("ModuleScript") then
+	local loaded, builder = pcall(require, worldModule)
+	if loaded and type(builder) == "table" and type(builder.Start) == "function" then
+		local built, err = pcall(builder.Start)
+		if not built then warn("[RIFTBOUND] World generation failed:", err) end
+	else
+		warn("[RIFTBOUND] World builder unavailable; combat remains playable:", builder)
+	end
+else
+	warn("[RIFTBOUND] No WorldBuilder module. Existing environment retained.")
+end
 -- Optional progression: failure cannot disable the working combat or NPC system.
 local Progression = {AwardNPCDefeat = function() return false end}
 local progressionModule = script:FindFirstChild("Progression") or script:WaitForChild("Progression", 3)
@@ -384,7 +399,7 @@ if game:GetService("RunService"):IsStudio() then
 end
 
 
--- Spawn the first two combat NPCs without coupling their startup to core combat.
+-- Spawn world encounter NPCs without coupling their startup to core combat.
 -- The Studio dummy and player combat continue working if this module is missing.
 task.defer(function()
 	local module = script:FindFirstChild("CombatNPCs") or script:WaitForChild("CombatNPCs", 4)
