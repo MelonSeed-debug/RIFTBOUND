@@ -21,9 +21,9 @@ return {
 		-- Great Sword marker timings measured from the source KeyframeSequences:
 		-- M1: 0.65/0.65/0.583/0.633s, Heavy: first hit 1.233s,
 		-- DashAttack: 0.4s, UpTilt: 0.54s, AirSlam: 0.422s, M5: 0.633s.
-		SwordM1_1 = 5.42, SwordM1_2 = 5.42,
-		SwordM1_3 = 4.86, SwordM1_4 = 5.28,
-		SwordHeavy = 3.43, SwordDashAttack = 2.5,
+		SwordM1_1 = 2.71, SwordM1_2 = 2.71,
+		SwordM1_3 = 2.43, SwordM1_4 = 2.64,
+		SwordHeavy = 2.24, SwordDashAttack = 2.5,
 		SwordUplift = 2.08, SwordSlam = 1.0,
 		SwordExecution = 1.02,
 	},
