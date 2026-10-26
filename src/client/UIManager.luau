@@ -10,7 +10,7 @@ local MODALS={
 	RiftMainMenu={W=575,H=492},
 	DecoInventory={W=530,H=515},
 	QuestJournal={W=430,H=470},
-	SpecSelection={W=380,H=408},
+	SpecSelection={W=380,H=480},
 	RiftStoryDialogue={W=650,H=274},
 }
 
