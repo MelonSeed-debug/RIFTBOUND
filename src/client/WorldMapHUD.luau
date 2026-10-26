@@ -4,13 +4,14 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ContextActionService = game:GetService("ContextActionService")
 local World = require(ReplicatedStorage.Riftbound.Shared.WorldConfig)
+local Deco = require(script.Parent.ArtDecoUI)
 local Map = {}
 
-local DUSK = Color3.fromRGB(14,22,44)
-local SKY = Color3.fromRGB(27,45,72)
-local TEXT = Color3.fromRGB(240,245,255)
-local MUTE = Color3.fromRGB(182,190,211)
-local SAFE = Color3.fromRGB(105,190,252)
+local DUSK = Deco.Ink
+local SKY = Color3.fromRGB(25,27,36)
+local TEXT = Deco.Paper
+local MUTE = Deco.Muted
+local SAFE = Deco.Gold
 local minX,maxX,minZ,maxZ = -370,560,-555,155
 
 local function nodePos(x,z)
@@ -97,7 +98,8 @@ function Map.Init(player,gui)
 	toggle.TextSize=13
 	toggle.Text="WORLD MAP [N]"
 	toggle.Parent=gui
-	corner(toggle,7)
+	corner(toggle,4)
+	Deco.Button(toggle)
 	local map=Instance.new("Frame")
 	map.Name="RiftboundWorldMap"
 	map.AnchorPoint=Vector2.new(0.5,0.5)
@@ -107,7 +109,8 @@ function Map.Init(player,gui)
 	map.BackgroundColor3=DUSK
 	map.BorderSizePixel=0
 	map.Parent=gui
-	corner(map,12)
+	corner(map,5)
+	Deco.Panel(map)
 	local maxSize=Instance.new("UISizeConstraint")
 	maxSize.MaxSize=Vector2.new(720,496)
 	maxSize.MinSize=Vector2.new(310,496)
@@ -126,7 +129,8 @@ function Map.Init(player,gui)
 	close.TextColor3=TEXT
 	close.Font=Enum.Font.GothamBold
 	close.Parent=map
-	corner(close,7)
+	corner(close,5)
+	Deco.Button(close)
 	close.Activated:Connect(function()map.Visible=false end)
 	local subtitle=label(map,"Four islands / four bridges / one shared world",
 		UDim2.fromOffset(17,41),UDim2.new(1,-32,0,21),12,MUTE,false)
@@ -140,7 +144,7 @@ function Map.Init(player,gui)
 	canvas.Parent=map
 	corner(canvas,10)
 	local grid=Instance.new("UIStroke")
-	grid.Color=Color3.fromRGB(58,85,122)
+	grid.Color=Deco.Bronze
 	grid.Thickness=1.25
 	grid.Parent=canvas
 	-- Draw bridges before islands, keeping them behind colored island surfaces.
@@ -172,7 +176,7 @@ function Map.Init(player,gui)
 	marker.AnchorPoint=Vector2.new(0.5,0.5)
 	marker.Size=UDim2.fromOffset(13,13)
 	marker.Position=nodePos(0,0)
-	marker.BackgroundColor3=Color3.fromRGB(255,245,125)
+	marker.BackgroundColor3=Deco.PaleGold
 	marker.BorderSizePixel=0
 	marker.ZIndex=4
 	marker.Parent=canvas
