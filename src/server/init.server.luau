@@ -382,7 +382,17 @@ local function dash(player)
 	velocity.Parent = root
 	Debris:AddItem(velocity,0.17)
 	Debris:AddItem(attachment,0.17)
-	fx:FireAllClients("Dash",character)
+	-- Pass directional metadata ONLY for animation selection. Actual
+	-- distance/speed remains server-authoritative and unchanged.
+	local forwardDot = root.CFrame.LookVector:Dot(direction)
+	local sideDot = root.CFrame.RightVector:Dot(direction)
+	local dashDirection
+	if math.abs(sideDot) > math.abs(forwardDot) then
+		dashDirection = sideDot >= 0 and "Right" or "Left"
+	else
+		dashDirection = forwardDot < 0 and "Back" or "Forward"
+	end
+	fx:FireAllClients("Dash",character,dashDirection)
 end
 
 request.OnServerEvent:Connect(function(player, action, value)
