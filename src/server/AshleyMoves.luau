@@ -239,6 +239,7 @@ function Moves.Cast(player, key)
 		if not ready(player, key, data.Cooldown) then return false end
 		local goal = aimPoint(character, root, 19)
 		launch(character, goal, 0.48, Color3.fromRGB(210, 90, 245), function(position)
+			if player.Character ~= character or player:GetAttribute("EquippedSpec") ~= "AshleySimmons" then return end
 			pulse(position, 7, Color3.fromRGB(185, 70, 240), 0.35)
 			fx:FireAllClients("TrippyExplosion", position)
 			for _, victim in targets(position, 7, character) do
@@ -260,10 +261,11 @@ function Moves.Cast(player, key)
 		}
 		for shot = 1, data.ProjectileCount do
 			task.delay((shot - 1) * 0.2, function()
-				if not character.Parent then return end
+				if player.Character ~= character or player:GetAttribute("EquippedSpec") ~= "AshleySimmons" then return end
 				local offset = Vector3.new(rng:NextNumber(-4, 4), 0, rng:NextNumber(-4, 4))
 				local effect = effects[rng:NextInteger(1, #effects)]
 				launch(character, center + offset, 0.4, colors[shot], function(position)
+					if player.Character ~= character or player:GetAttribute("EquippedSpec") ~= "AshleySimmons" then return end
 					pulse(position, 5.5, colors[shot], 0.32)
 					fx:FireAllClients("FrenzyExplosion", position, effect)
 					local hit = targets(position, 5.5, character)
@@ -283,6 +285,23 @@ function Moves.Cast(player, key)
 		return true
 	end
 	return false
+end
+
+-- Clear only the outgoing Ashley movement buff when switching Specs.
+-- Enemy-inflicted debuffs are intentionally left alone.
+function Moves.StopPlayerBuffs(player)
+	local character = player.Character
+	if not character then return end
+	local s = state(player)
+	s.rush += 1 -- Invalidate the active Rave Rush timeout.
+	character:SetAttribute("RaveRushEnds", 0)
+	local root = character:FindFirstChild("HumanoidRootPart")
+	local emitter = root and root:FindFirstChild("RaveRushTrail")
+	if emitter then emitter:Destroy() end
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if humanoid and humanoid.Health > 0 then
+		humanoid.WalkSpeed = character:GetAttribute("RiftBlocking") == true and combat.Block.WalkSpeed or combat.BaseWalkSpeed
+	end
 end
 
 function Moves.ResetPlayer(player)
