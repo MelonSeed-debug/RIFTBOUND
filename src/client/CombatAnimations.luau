@@ -2,7 +2,11 @@
 -- Unified R15 combat motion: the same named moves for every player.
 -- Uploaded animation IDs take priority; procedural poses are a temporary fallback.
 local TweenService = game:GetService("TweenService")
-local Config = require(game:GetService("ReplicatedStorage"):WaitForChild("Riftbound"):WaitForChild("Shared"):WaitForChild("AnimationConfig"))
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local RunService = game:GetService("RunService")
+local AnimationClipProvider = game:GetService("AnimationClipProvider")
+local KeyframeSequenceProvider = game:GetService("KeyframeSequenceProvider")
+local Config = require(ReplicatedStorage:WaitForChild("Riftbound"):WaitForChild("Shared"):WaitForChild("AnimationConfig"))
 local Motion = {}
 local states = setmetatable({}, {__mode = "k"})
 
@@ -87,28 +91,87 @@ local function fallback(character, s, move, persistent)
 	end
 end
 
-local function playAsset(character, s, move)
+-- The curated .rbxm holds KeyframeSequences, NOT uploaded animation IDs.
+-- Roblox lets Studio preview these as temporary hash:// IDs. Those hashes
+-- never work in a published experience, so real uploaded IDs take priority.
+local clipIds = setmetatable({}, {__mode = "k"})
+local lastMissingWarning = false
+local function resolveId(move)
 	local id = Config.Moves[move]
-	if typeof(id) ~= "string" or id == "" then return false end
-	local hum = character:FindFirstChildOfClass("Humanoid")
-	if not hum then return false end
-	local animator = hum:FindFirstChildOfClass("Animator")
+	if typeof(id) == "string" and id ~= "" then
+		if id:match("^%d+$") then return "rbxassetid://" .. id end
+		return id
+	end
+	if Config.StudioPreview ~= true or not RunService:IsStudio() then
+		return nil
+	end
+	local library = ReplicatedStorage:FindFirstChild(Config.PreviewFolder)
+	if not library then
+		if not lastMissingWarning then
+			lastMissingWarning = true
+			warn("[RIFTBOUND Animations] Import RIFTBOUND_Combat_Animation_Clips.rbxm " ..
+				"into ReplicatedStorage for local animation preview. " ..
+				"Using procedural motion until then.")
+		end
+		return nil
+	end
+	local sequence = library:FindFirstChild(move)
+	if not sequence or not sequence:IsA("KeyframeSequence") then return nil end
+	if clipIds[sequence] then return clipIds[sequence] end
+	local ok, previewId = pcall(function()
+		return AnimationClipProvider:RegisterAnimationClip(sequence)
+	end)
+	if not ok or typeof(previewId) ~= "string" or previewId == "" then
+		-- Fallback API is deprecated but supports KeyframeSequence preview
+		-- in Studio versions which do not accept AnimationClip registration.
+		ok, previewId = pcall(function()
+			return KeyframeSequenceProvider:RegisterKeyframeSequence(sequence)
+		end)
+	end
+	if ok and typeof(previewId) == "string" and previewId ~= "" then
+		clipIds[sequence] = previewId
+		return previewId
+	end
+	warn("[RIFTBOUND Animations] Could not register Studio preview:",move,previewId)
+	return nil
+end
+
+local function playAsset(character, s, move)
+	local id = resolveId(move)
+	if not id then return false end
+	local humanoid = character:FindFirstChildOfClass("Humanoid")
+	if not humanoid then return false end
+	local animator = humanoid:FindFirstChildOfClass("Animator")
 	if not animator then return false end
 	local track = s.tracks[move]
 	if not track then
 		local animation = Instance.new("Animation")
+		animation.Name = "Riftbound_" .. move
 		animation.AnimationId = id
-		local success, loaded = pcall(function() return animator:LoadAnimation(animation) end)
+		local success, loaded = pcall(function()
+			return animator:LoadAnimation(animation)
+		end)
 		animation:Destroy()
-		if not success then warn("RIFTBOUND animation could not load:",move,loaded) return false end
+		if not success or not loaded then
+			warn("[RIFTBOUND Animations] Could not load:",move,loaded)
+			return false
+		end
 		track = loaded
 		track.Priority = Enum.AnimationPriority.Action
+		track.Looped = move == "Block"
 		s.tracks[move] = track
 	end
-	for key, other in s.tracks do
-		if key ~= move and other.IsPlaying then other:Stop(0.08) end
+	clearTweens(s)
+	-- Previous procedural C0s must not offset a genuine R15 animation.
+	for motor, original in s.originals do
+		if motor.Parent then motor.C0 = original end
 	end
-	track:Play(0.08)
+	for key, other in s.tracks do
+		if key ~= move and other.IsPlaying then
+			other:Stop(0.06)
+		end
+	end
+	track:Play(0.06, 1, 1)
 	return true
 end
 
@@ -118,7 +181,13 @@ function Motion.Play(character, effect, value)
 	if effect == "Swing" then
 		move = "M1_" .. tostring(math.clamp(tonumber(value) or 1, 1, 4))
 	elseif effect == "HeavySwing" then move = "Heavy"
-	elseif effect == "Dash" then move = "Dash"
+	elseif effect == "Dash" then
+		if value == "Left" or value == "Right" or value == "Back" then
+			move = "Dash" .. value
+		else
+			move = "Dash"
+		end
+	elseif effect == "Parry" then move = "Parry"
 	elseif effect == "Hit" then move = "Hit"
 	elseif effect == "GuardBreak" then move = "GuardBreak"
 	elseif effect == "Block" then
