@@ -4,6 +4,7 @@
 local ReplicatedStorage=game:GetService("ReplicatedStorage")
 local Deco=require(script.Parent.ArtDecoUI)
 local cfg=require(ReplicatedStorage.Riftbound.Shared.VoidDiscipleSpec)
+local masteryCfg=require(ReplicatedStorage.Riftbound.Shared.MasteryConfig)
 local HUD={}
 
 function HUD.Init(player,gui)
@@ -45,10 +46,17 @@ function HUD.Init(player,gui)
 			dock.Visible=isVoid and dock:GetAttribute("RiftHideInCompact")~=true
 			if isVoid then
 				local now=workspace:GetServerTimeNow()
+				local mastery=player:GetAttribute("SpecMastery_VoidDisciple") or 0
 				for key,cell in rows do
-					local left=math.max(0,math.ceil((player:GetAttribute("Void"..key.."ReadyAt") or 0)-now))
-					cell.State.Text=left>0 and (tostring(left).."s") or "READY"
-					cell.State.TextColor3=left>0 and Deco.Muted or Deco.Green
+					local needed=masteryCfg.SkillRequirements[key] or 0
+					if mastery<needed then
+						cell.State.Text="LOCKED  "..needed.." XP"
+						cell.State.TextColor3=Deco.Red
+					else
+						local left=math.max(0,math.ceil((player:GetAttribute("Void"..key.."ReadyAt") or 0)-now))
+						cell.State.Text=left>0 and (tostring(left).."s") or "READY"
+						cell.State.TextColor3=left>0 and Deco.Muted or Deco.Green
+					end
 				end
 			end
 			task.wait(0.18)
