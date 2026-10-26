@@ -3,6 +3,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local Players = game:GetService("Players")
 local cfg = require(ReplicatedStorage.Riftbound.Shared.AshleySimmonsSpec).Abilities.Z
+local Items = require(ReplicatedStorage.Riftbound.Shared.ItemConfig)
 local Shield = {}
 local cooldowns = setmetatable({}, {__mode="k"})
 local generations = setmetatable({}, {__mode="k"})
@@ -47,6 +48,13 @@ function Shield.Damage(target, humanoid, amount, attacker)
 	-- Shared server damage calculation for Spec status effects.
 	local attackerCharacter = attacker and attacker.Character
 	if attackerCharacter then
+		-- Equipped gear and shop consumables enhance the existing damage path.
+		local ownedGear = attacker:GetAttribute("EquippedGear")
+		local gear = typeof(ownedGear) == "string" and Items.Items[ownedGear]
+		if gear and gear.Kind == "Gear" then amount *= gear.Multiplier end
+		if (attackerCharacter:GetAttribute("RiftDamageBuffEnds") or 0) > time then
+			amount *= math.clamp(attackerCharacter:GetAttribute("RiftDamageBuffMultiplier") or 1,1,1.3)
+		end
 		if (attackerCharacter:GetAttribute("Pill_AdrenalineRush") or 0) > os.clock() then
 			amount *= 1.20
 		end
@@ -61,6 +69,9 @@ function Shield.Damage(target, humanoid, amount, attacker)
 		amount *= 1.10
 	end
 	-- Damage resistance is calculated on the server before shield absorption.
+	if (target:GetAttribute("RiftDefenseBuffEnds") or 0) > time then
+		amount *= math.clamp(target:GetAttribute("RiftDefenseBuffMultiplier") or 1,0.5,1)
+	end
 	local resistanceEnds = target:GetAttribute("BuzzBoostEnds")
 	local resistance = target:GetAttribute("BuzzBoostResistance")
 	if typeof(resistanceEnds) == "number" and workspace:GetServerTimeNow() < resistanceEnds and typeof(resistance) == "number" then
