@@ -228,6 +228,9 @@ local function heavy(player)
 									end)
 								end
 								target:SetAttribute("RiftBlocking",false)
+								if target:GetAttribute("RiftNPC") == true then
+									target:SetAttribute("RiftNPCStunnedUntil", os.clock() + config.Heavy.GuardBreakStun)
+								end
 								fx:FireAllClients("GuardBreak",target)
 							else
 								Shield.Damage(target, hum, config.Heavy.Damage, player)
@@ -326,3 +329,29 @@ if game:GetService("RunService"):IsStudio() then
 	dummy.Parent = Workspace
 	hum.Died:Connect(function() task.delay(3,function() if dummy.Parent then hum.Health=hum.MaxHealth end end) end)
 end
+
+
+-- Spawn the first two combat NPCs without coupling their startup to core combat.
+-- The Studio dummy and player combat continue working if this module is missing.
+task.defer(function()
+	local module = script:FindFirstChild("CombatNPCs") or script:WaitForChild("CombatNPCs", 4)
+	if not module or not module:IsA("ModuleScript") then
+		warn("[RIFTBOUND] Combat NPC module not found; base combat remains available.")
+		return
+	end
+	local ok, npc = pcall(require, module)
+	if not ok or type(npc) ~= "table" or type(npc.Start) ~= "function" then
+		warn("[RIFTBOUND] Combat NPC module could not load:", npc)
+		return
+	end
+	local started, err = pcall(npc.Start, {
+		DealDamage = function(character, humanoid, damage)
+			return Shield.Damage(character, humanoid, damage)
+		end,
+		IsParrying = function(player)
+			local s = getState(player)
+			return s.blocking == true and os.clock() <= s.parryUntil
+		end,
+	})
+	if not started then warn("[RIFTBOUND] Combat NPC startup failed:", err) end
+end)
