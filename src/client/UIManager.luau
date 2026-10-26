@@ -4,10 +4,10 @@
 -- and a clear separation between the left stats, center navigation, right tools.
 -- Called AFTER the UI modules have been initialized.
 local Workspace=game:GetService("Workspace")
-local UserInputService=game:GetService("UserInputService")
-
+ 
 local Manager={}
 local MODALS={
+	RiftMainMenu={W=575,H=540},
 	DecoInventory={W=530,H=515},
 	QuestJournal={W=430,H=470},
 	SpecSelection={W=380,H=408},
@@ -28,12 +28,24 @@ local function applyScale(node,scale,name)
 end
 
 function Manager.Init(_,gui)
+	-- Prevent modals from hiding their own text on ScreenGuis configured
+	-- with global ZIndex layering.
+	if gui:IsA("ScreenGui") then
+		gui.ZIndexBehavior=Enum.ZIndexBehavior.Sibling
+	end
 	local watched={}
+	local legacyButtons={
+		OpenSpecs=true,
+		OpenQuestLog=true,
+		InventoryToggle=true,
+		WorldMapButton=true,
+	}
 	local processing=false
 
 	local function watchModal(element)
 		if watched[element] or not MODALS[element.Name] then return end
 		watched[element]=true
+		-- With Sibling ZIndex, every descendant renders over the panel.
 		element.ZIndex=20
 		element.Active=true
 		element:GetPropertyChangedSignal("Visible"):Connect(function()
@@ -48,8 +60,14 @@ function Manager.Init(_,gui)
 		end)
 	end
 
-	for _,child in gui:GetChildren() do watchModal(child) end
-	gui.ChildAdded:Connect(watchModal)
+	local function watchElement(child)
+		watchModal(child)
+		if legacyButtons[child.Name] and child:IsA("GuiObject") then
+			child.Visible=false
+		end
+	end
+	for _,child in gui:GetChildren() do watchElement(child) end
+	gui.ChildAdded:Connect(watchElement)
 
 	local function layout()
 		local camera=Workspace.CurrentCamera
@@ -132,6 +150,22 @@ function Manager.Init(_,gui)
 			dock.Position=UDim2.fromOffset(contentCenter,147)
 			-- Mobile touch buttons take priority over a full-width cooldown dock.
 			dock:SetAttribute("RiftHideInCompact",compact)
+		end
+
+		local tracker=gui:FindFirstChild("QuestTracker")
+		if tracker then
+			tracker.Position=UDim2.new(1,-238,0,86)
+			if compact then
+				applyScale(tracker,0.72,"QuestCompactScale")
+			else
+				applyScale(tracker,1,"QuestCompactScale")
+			end
+		end
+
+		local menuButton=gui:FindFirstChild("MainMenuToggle")
+		if menuButton then
+			menuButton.Position=UDim2.new(1,-155,0,16)
+			menuButton.Visible=true
 		end
 
 		local hint=gui:FindFirstChild("ControlsHint")
