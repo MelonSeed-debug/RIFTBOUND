@@ -34,11 +34,22 @@ if buzzModule then
 	if ok and type(loaded) == "table" then Buzz = loaded
 	else warn("[RIFTBOUND] Buzz Boost unavailable:", loaded) end
 end
+-- The new skills are optional so a failed skill module never disables core combat.
+local AshleyMoves = {Cast = function() return false end, ResetPlayer = function() end, ClearCharacter = function() end}
+local ashleyModule = script:FindFirstChild("AshleyMoves") or script:WaitForChild("AshleyMoves", 3)
+if ashleyModule then
+	local ok, loaded = pcall(require, ashleyModule)
+	if ok and type(loaded) == "table" then AshleyMoves = loaded
+	else warn("[RIFTBOUND] Ashley moves unavailable:", loaded) end
+end
 local specRequest = rift.Remotes:FindFirstChild("SpecRequest")
 if specRequest then
 	specRequest.OnServerEvent:Connect(function(player, action)
 		if action == "PillShield" then Shield.Activate(player)
-		elseif action == "BuzzBoost" then Buzz.Activate(player) end
+		elseif action == "BuzzBoost" then Buzz.Activate(player)
+		elseif action == "RaveRush" then AshleyMoves.Cast(player, "C")
+		elseif action == "TrippyToss" then AshleyMoves.Cast(player, "V")
+		elseif action == "Frenzy" then AshleyMoves.Cast(player, "G") end
 	end)
 end
 local request = rift.Remotes.CombatRequest
@@ -71,7 +82,7 @@ local function block(player, active)
 	end
 	s.blocking = active
 	character:SetAttribute("RiftBlocking", active)
-	humanoid.WalkSpeed = active and config.Block.WalkSpeed or config.BaseWalkSpeed
+	humanoid.WalkSpeed = active and config.Block.WalkSpeed or ((character:GetAttribute("RaveRushEnds") or 0) > Workspace:GetServerTimeNow() and config.BaseWalkSpeed * 1.5 or config.BaseWalkSpeed)
 	fx:FireAllClients("Block", character, active)
 end
 
@@ -88,6 +99,12 @@ local function m1(player)
 	s.nextM1 = now + (combo == 4 and config.M1.FinisherCooldown or config.M1.HitCooldown)
 	s.attacking = true
 	fx:FireAllClients("Swing", character, combo)
+	if character:GetAttribute("FrenzyNausea") == true then
+		character:SetAttribute("FrenzyNausea", nil)
+		fx:FireAllClients("NauseaMiss", character)
+		task.delay(config.M1.Recovery, function() s.attacking = false end)
+		return
+	end
 	-- Resolve hit after short windup; use SERVER character position.
 	task.delay(0.12, function()
 		local liveChar, _, liveRoot = alive(player)
@@ -118,7 +135,7 @@ local function m1(player)
 								fx:FireAllClients("BlockedHit",model,combo)
 							end
 						else
-							Shield.Damage(model, targetHum, config.M1.Damages[combo])
+							Shield.Damage(model, targetHum, config.M1.Damages[combo], player)
 							PillPassive.OnHit(player, model)
 							if combo == 4 and not targetRoot.Anchored then
 								targetRoot.AssemblyLinearVelocity = liveRoot.CFrame.LookVector * config.M1.FinisherKnockback + Vector3.new(0,12,0)
@@ -142,6 +159,12 @@ local function heavy(player)
 	s.nextHeavy = now + config.Heavy.Cooldown
 	s.attacking = true
 	fx:FireAllClients("HeavySwing",character)
+	if character:GetAttribute("FrenzyNausea") == true then
+		character:SetAttribute("FrenzyNausea", nil)
+		fx:FireAllClients("NauseaMiss", character)
+		task.delay(config.Heavy.Recovery, function() s.attacking = false end)
+		return
+	end
 	task.delay(config.Heavy.Windup,function()
 		local current, _, currentRoot = alive(player)
 		if current ~= character or not currentRoot or os.clock() < s.stunnedUntil then return end
@@ -179,7 +202,7 @@ local function heavy(player)
 								target:SetAttribute("RiftBlocking",false)
 								fx:FireAllClients("GuardBreak",target)
 							else
-								Shield.Damage(target, hum, config.Heavy.Damage)
+								Shield.Damage(target, hum, config.Heavy.Damage, player)
 								PillPassive.OnHit(player, target)
 								if not targetRoot.Anchored then targetRoot.AssemblyLinearVelocity=currentRoot.CFrame.LookVector*config.Heavy.Knockback end
 								fx:FireAllClients("Hit",target,5,config.Heavy.Damage)
@@ -235,6 +258,7 @@ local function setup(player)
 	PillPassive.Reset(player)
 	Shield.ResetPlayer(player)
 	Buzz.ResetPlayer(player)
+	AshleyMoves.ResetPlayer(player)
 	player.CharacterAdded:Connect(function(character)
 		local s = getState(player)
 		s.combo,s.lastHit,s.nextM1,s.nextDash = 0,0,0,0
@@ -243,6 +267,7 @@ local function setup(player)
 		character:SetAttribute("RiftBlocking",false)
 		Shield.Clear(character)
 		Buzz.Clear(character)
+		AshleyMoves.ClearCharacter(character)
 		PillPassive.Reset(player)
 	end)
 	if player.Character then player.Character:SetAttribute("RiftBlocking",false) end
