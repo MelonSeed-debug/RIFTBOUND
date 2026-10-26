@@ -27,6 +27,10 @@ return {
 		AbyssSigil = {Name="Abyss Sigil", Description="Proof of conquering the Abyss dungeon. Rare drop.", Kind="Material",
 			SellValue=225, Color=Color3.fromRGB(252,113,209)},
 	},
+	ShopLocations = {
+		Apothecary = Vector3.new(61,0,-2),
+		Gear = Vector3.new(-66,0,-6),
+	},
 	Shops = {
 		Apothecary = {Name="HAVEN APOTHECARY", Stock={"FieldBandage","RiftTonic","EmberDraught","WardVial"}},
 		Gear = {Name="GILDED GEAR DEPOT", Stock={"IronGrips","GildedCrest"}},
