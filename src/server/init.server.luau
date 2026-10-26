@@ -7,6 +7,8 @@ local Workspace = game:GetService("Workspace")
 local rift = ReplicatedStorage:WaitForChild("Riftbound")
 local config = require(rift.Shared.CombatConfig)
 local worldCfg = require(rift.Shared.WorldConfig)
+local masteryCfg = require(rift.Shared.MasteryConfig)
+local masteryRemote = rift.Remotes:FindFirstChild("MasteryFX")
 
 -- Generate the Studio world synchronously BEFORE quests and NPCs spawn.
 -- The map is optional and a failure never interrupts combat.
@@ -111,6 +113,27 @@ task.defer(function()
 	local started, err = pcall(service.Start)
 	if not started then warn("[RIFTBOUND] Quest service failed to start:", err) end
 end)
+-- These feature services are isolated so inventory/dialogue failures cannot
+-- stop M1, blocking, Spec selection, quest rewards or saved progression.
+local function bootOptional(moduleName)
+	local instance = script:FindFirstChild(moduleName) or script:WaitForChild(moduleName, 3)
+	if not instance or not instance:IsA("ModuleScript") then
+		warn("[RIFTBOUND] Missing optional server service:", moduleName)
+		return
+	end
+	local ok,service=pcall(require,instance)
+	if not ok or type(service)~="table" or type(service.Start)~="function" then
+		warn("[RIFTBOUND] Cannot load service:",moduleName,service)
+		return
+	end
+	local started,err=pcall(service.Start)
+	if not started then warn("[RIFTBOUND] Cannot start service:",moduleName,err) end
+end
+task.defer(function()
+	bootOptional("EconomyService")
+	bootOptional("WorldActors")
+end)
+
 local specRequest = rift.Remotes:WaitForChild("SpecRequest", 5)
 if specRequest then
 	specRequest.OnServerEvent:Connect(function(player, action, requestedId)
@@ -130,6 +153,20 @@ if specRequest then
 				end
 			end
 			return
+		end
+		-- Client can request a skill, but the server decides if enough
+		-- mastery has been earned from actual rewarded NPC defeats.
+		local skill=masteryCfg.SkillActions[action]
+		if skill then
+			if player:GetAttribute("EquippedSpec")~=skill.Spec then return end
+			local needed=masteryCfg.SkillRequirements[skill.Key] or 0
+			local owned=player:GetAttribute("SpecMastery_"..skill.Spec) or 0
+			if owned<needed then
+				if masteryRemote then
+					masteryRemote:FireClient(player,skill.Key,needed,owned)
+				end
+				return
+			end
 		end
 		if action == "PillShield" then Shield.Activate(player)
 		elseif action == "BuzzBoost" then Buzz.Activate(player)
@@ -437,4 +474,9 @@ task.defer(function()
 		end,
 	})
 	if not started then warn("[RIFTBOUND] Combat NPC startup failed:", err) end
+end)
+-- Dungeon waits until the shared NPC module has been bootstrapped.
+task.defer(function()
+	task.wait(0.25)
+	bootOptional("DungeonService")
 end)
