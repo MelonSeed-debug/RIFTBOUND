@@ -33,7 +33,7 @@ task.delay(8, function()
 	warning.TextSize = 17
 	warning.TextWrapped = true
 	warning.Font = Enum.Font.GothamBold
-	warning.Text = "RIFTBOUND CLIENT NOT READY\\nCheck Rojo connection and ReplicatedStorage > Riftbound. Open View > Output for errors."
+	warning.Text = "RIFTBOUND CLIENT NOT READY\nCheck Rojo connection and ReplicatedStorage > Riftbound. Open View > Output for errors."
 	warning.Parent = diagnosticGui
 end)
 local rift = ReplicatedStorage:WaitForChild("Riftbound")
