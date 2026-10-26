@@ -19,7 +19,7 @@ If you've already baked the island world (Workspace / RIFTBOUND World), keep it;
 | Key | Panel / action |
 | --- | --- |
 | I | Inventory: use healing items, equip gear, view materials |
-| J | Quest Journal: accept, abandon, claim missions |
+| J or P | Quest Journal: accept, abandon, claim missions |
 | M | Equip Ashley Simmons or earned Void Disciple |
 | B | World Guide |
 | N | Island Map |
@@ -56,16 +56,37 @@ Five story quests are sequential and saved with the existing quests:
 
 Non-story quests and the Void Disciple acquisition trial remain available.
 
-## Spec mastery
+## Spec mastery v0.2 — uses, XP and rising level costs
 
-NPC defeats count toward mastery only while you have that Spec equipped. Mastery persists, separately for Ashley Simmons and Void Disciple.
+Mastery is now gained by **successful skill activations**, not enemy kills. Each Spec has its own saved mastery XP and level. Skill casts rejected by the server (wrong Spec, dead, on cooldown, below required mastery) award **zero XP**.
 
-- Z and X: available immediately after equipping the Spec.
-- C: 3 confirmed NPC defeats with that Spec.
-- V: 10 confirmed NPC defeats.
-- G: 25 confirmed NPC defeats.
+| Skill slot | Key | Total mastery XP needed | XP gained per successful cast |
+| --- | --- | ---: | ---: |
+| First | Z | 0 | 2 |
+| Second | X | 10 | 3 |
+| Third | C | 25 | 4 |
+| Fourth | V | 40 | 5 |
+| Fifth / ultimate | G | 60 | 7 |
 
-The new gilded HUD shows current mastery and skill locks. The server rejects attempts to use a locked skill.
+**Mastery level progression:**
+- Level 0 → 1 needs **10 XP**.
+- Level 1 → 2 needs another **15 XP** (25 total).
+- Level 2 → 3 needs another **20 XP** (45 total).
+- Level 3 → 4 needs another **25 XP** (70 total).
+- Subsequent levels add **5 XP more** than the last; max mastery level is 50.
+
+Skill unlocks are based on **total earned mastery XP**, not mastery level directly. This makes X unlock at the first level milestone (10 XP), C at 25 XP and so on.
+
+The previous v4 saved mastery generated from NPC defeats is migrated once at **2 XP per legacy mastery point**, so existing progress is not abruptly discarded. New saves store `masteryXP` in profile version 5.
+
+## Interface overlap fixes
+
+- Large panels (Inventory, Quests, Specs, Map, World Guide, Story Dialogue) are **mutually exclusive**. Opening one closes the others.
+- The Void Disciple cooldowns now occupy a **five-slot center-top dock**, not the same bottom-left space as the health bars.
+- Mastery and health/shield displays have separate positions. Small viewport scaling reduces panel crowding, and the large dock is hidden in especially compact viewports.
+- Keys **I**, **J or P**, **M**, **B**, and **N** remain available; P is an additional quest shortcut.
+- Black/gold/Art Deco style remains active.
+
 
 ## Abyss Citadel — first playable dungeon
 
@@ -87,17 +108,17 @@ Storage uses the same key and upgrades the snapshot version to 4 without resetti
 ## Test checklist
 
 - [ ] Red/yellow Output free of module errors at startup
-- [ ] I opens the inventory; shop prompts for Dr. Liora and Gilded Broker work
+- [ ] I opens the inventory, J and P both open quests; shop prompts for Dr. Liora and Gilded Broker work
 - [ ] Buying a bandage removes exactly 35 Rift Coins and adds one bandage
 - [ ] Damaged player can use bandage; full-health player cannot waste it
 - [ ] Equip Iron Grips and verify damage is increased
-- [ ] Defeat NPCs; confirm randomized material drops and mastery increments
-- [ ] C unlocks after 3 Spec kills, V after 10, G after 25; locks enforced by server
+- [ ] Defeat NPCs; confirm randomized loot. Verify a kill ALONE does not increase mastery
+- [ ] Cast Z five times (respect its cooldown): 10 total mastery XP, mastery level 1, X unlocks. Then use X (+3 XP) to work toward C (25 XP), V (40 XP), G (60 XP)
 - [ ] Accept The First Spark, talk to Dr. Liora, claim quest
 - [ ] Verify chained quests must be completed in order
 - [ ] Enter Abyss Citadel at level 25; dodge slam markers; fight the Warden
 - [ ] Verify quest kill credit, guaranteed sigil, loot, and Abyss clear count
-- [ ] Leave/rejoin (with Studio API access) and confirm items, gear and mastery are restored
-- [ ] Confirm basic M1, heavy, blocking, dash, Ashley and Void Disciple still work
+- [ ] Leave/rejoin (with Studio API access) and confirm items, gear and skill-earned mastery XP are restored
+- [ ] Confirm windows no longer overlap: open Specs, Quests, Inventory and Map one after another; verify only one remains open. Confirm basic combat still works
 
 Known initial limitations: generated NPC character models are simple mannequins; UI is reference-inspired rather than using the original texture image, merchants have no full shop interiors, and dungeon co-op loot sharing is not implemented. Report Output errors after Studio testing for a focused fix.
