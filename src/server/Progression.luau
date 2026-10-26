@@ -321,7 +321,8 @@ function Progression.SellItem(player,itemId)
 	p.inventory[itemId] -= 1
 	if p.inventory[itemId]==0 then p.inventory[itemId]=nil end
 	p.coins=math.min(1000000000,p.coins+info.SellValue)
-	p.revision+=1 p.dirty=true
+	p.revision += 1
+	p.dirty = true
 	publish(player,p)
 	return true,"Sold "..info.Name.." for "..info.SellValue.." Rift Coins."
 end
@@ -335,7 +336,8 @@ function Progression.EquipGear(player,itemId)
 	end
 	if itemId ~= "" and p.level < (info.MinLevel or 1) then return false,"Level too low." end
 	p.equippedGear=itemId
-	p.revision+=1 p.dirty=true
+	p.revision += 1
+	p.dirty = true
 	publish(player,p)
 	return true,itemId=="" and "Unequipped gear." or ("Equipped "..info.Name..".")
 end
@@ -367,7 +369,8 @@ function Progression.UseItem(player,itemId)
 		char:SetAttribute("RiftDefenseBuffMultiplier",info.BuffValue)
 		char:SetAttribute("RiftDefenseBuffEnds",now+info.Duration)
 	end
-	p.revision+=1 p.dirty=true
+	p.revision += 1
+	p.dirty = true
 	publish(player,p)
 	return true,"Used "..info.Name.."."
 end
@@ -376,7 +379,8 @@ function Progression.RecordAbyssClear(player)
 	local p=profiles[player]
 	if not p or not p.loaded then return false end
 	p.abyssClears=math.min(999999,p.abyssClears+1)
-	p.revision+=1 p.dirty=true
+	p.revision += 1
+	p.dirty = true
 	publish(player,p)
 	return true
 end
