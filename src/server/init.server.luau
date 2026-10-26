@@ -154,30 +154,34 @@ if specRequest then
 			end
 			return
 		end
-		-- Client can request a skill, but the server decides if enough
-		-- mastery has been earned from actual rewarded NPC defeats.
+		-- The server checks Spec ownership, unlock thresholds and the actual
+		-- ability cooldown. XP is granted only if Cast/Activate returns true.
 		local skill=masteryCfg.SkillActions[action]
-		if skill then
-			if player:GetAttribute("EquippedSpec")~=skill.Spec then return end
-			local needed=masteryCfg.SkillRequirements[skill.Key] or 0
-			local owned=player:GetAttribute("SpecMastery_"..skill.Spec) or 0
-			if owned<needed then
-				if masteryRemote then
-					masteryRemote:FireClient(player,skill.Key,needed,owned)
-				end
-				return
+		if not skill then return end
+		if player:GetAttribute("EquippedSpec")~=skill.Spec then return end
+		local needed=masteryCfg.SkillRequirements[skill.Key] or 0
+		local owned=player:GetAttribute("SpecMastery_"..skill.Spec) or 0
+		if owned<needed then
+			if masteryRemote then
+				masteryRemote:FireClient(player,skill.Key,needed,owned)
 			end
+			return
 		end
-		if action == "PillShield" then Shield.Activate(player)
-		elseif action == "BuzzBoost" then Buzz.Activate(player)
-		elseif action == "RaveRush" then AshleyMoves.Cast(player, "C")
-		elseif action == "TrippyToss" then AshleyMoves.Cast(player, "V")
-		elseif action == "Frenzy" then AshleyMoves.Cast(player, "G")
-		elseif action == "VoidGuard" then Void.Cast(player, "Z")
-		elseif action == "VoidStep" then Void.Cast(player, "X")
-		elseif action == "VoidGrasp" then Void.Cast(player, "C")
-		elseif action == "VoidCleave" then Void.Cast(player, "V")
-		elseif action == "VoidNova" then Void.Cast(player, "G") end
+
+		local castSucceeded=false
+		if action == "PillShield" then castSucceeded=Shield.Activate(player)
+		elseif action == "BuzzBoost" then castSucceeded=Buzz.Activate(player)
+		elseif action == "RaveRush" then castSucceeded=AshleyMoves.Cast(player, "C")
+		elseif action == "TrippyToss" then castSucceeded=AshleyMoves.Cast(player, "V")
+		elseif action == "Frenzy" then castSucceeded=AshleyMoves.Cast(player, "G")
+		elseif action == "VoidGuard" then castSucceeded=Void.Cast(player, "Z")
+		elseif action == "VoidStep" then castSucceeded=Void.Cast(player, "X")
+		elseif action == "VoidGrasp" then castSucceeded=Void.Cast(player, "C")
+		elseif action == "VoidCleave" then castSucceeded=Void.Cast(player, "V")
+		elseif action == "VoidNova" then castSucceeded=Void.Cast(player, "G") end
+		if castSucceeded == true and Progression.AwardSkillUse then
+			Progression.AwardSkillUse(player,skill.Spec,skill.Key)
+		end
 	end)
 end
 local request = rift.Remotes.CombatRequest
