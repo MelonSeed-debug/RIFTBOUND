@@ -15,9 +15,9 @@ return {
 		VoidDisciple = {
 			Id = "VoidDisciple",
 			Name = "Void Disciple",
-			Subtitle = "Future Spec / Rift attunement",
-			Description = "A future unlockable Spec. Its gameplay is not implemented yet.",
-			Ready = false,
+			Subtitle = "Rift control / spatial strikes",
+			Description = "Unlock by completing the Rift Sentinel trial.",
+			Ready = true,
 			StarterUnlocked = false,
 			RequiredLevel = 10,
 			RequiredPermit = "RiftInitiate",
