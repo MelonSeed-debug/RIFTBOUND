@@ -204,6 +204,11 @@ fx.OnClientEvent:Connect(function(effect, character, combo, damage)
 		end
 		return
 	end
+	if effect == "NPCWindup" then
+		floatingText(root, "DODGE OR PARRY!", Color3.fromRGB(255, 145, 90))
+		shockwave(root, Color3.fromRGB(255, 125, 85), 3.5)
+		return
+	end
 	if effect == "Dash" then
 		shockwave(root, Color3.fromRGB(110, 190, 255), 4)
 		return
