@@ -43,7 +43,7 @@ return {
 	},
 	QuestStations = {
 		Archivist = Vector3.new(-18, 0, 12),
-		VoidTrial = Vector3.new(32, 0, -237),
+		VoidTrial = Vector3.new(34, 0, -172),
 	},
 	EnemySpawns = {
 		{ Name="Street Brawler", Id="OldQuarter", Offset=Vector3.new(-13,0,-79),
