@@ -4,6 +4,7 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local ContextActionService = game:GetService("ContextActionService")
 local Quests = require(ReplicatedStorage.Riftbound.Shared.QuestConfig)
+local World = require(ReplicatedStorage.Riftbound.Shared.WorldConfig)
 local Deco = require(script.Parent.ArtDecoUI)
 
 local QuestBoard = {}
@@ -123,7 +124,7 @@ function QuestBoard.Init(player, gui)
 			UDim2.new(1,-120,0,21), UDim2.fromOffset(10, 77), 12, colors.gold, true)
 		local action = button(card, "ACCEPT", UDim2.fromOffset(105, 33), UDim2.new(1,-115,0,68), colors.accent)
 		local note = text(card, "", UDim2.fromOffset(112, 25), UDim2.new(1,-122,0,6), 11, colors.muted, false)
-		cards[id] = {button=action, note=note, quest=q}
+		cards[id] = {button=action, note=note, quest=q, frame=card}
 		action.Activated:Connect(function()
 			local active = player:GetAttribute("QuestActiveId") or ""
 			if active == id then
@@ -156,6 +157,22 @@ function QuestBoard.Init(player, gui)
 		local active = player:GetAttribute("QuestActiveId") or ""
 		local count = player:GetAttribute("QuestCount") or 0
 		local activeQuest = Quests.Quests[active]
+		-- Show dialogue/story missions while the bandit-grind contracts are
+		-- paused. If a player saved an old contract, leave it visible so they
+		-- can abandon it without losing unrelated progression.
+		local visibleIndex = 0
+		for _, questId in Quests.Order do
+			local row = cards[questId]
+			if row then
+				local show = not World.PracticeMode or row.quest.Category == "Story" or questId == active
+				row.frame.Visible = show
+				if show then
+					row.frame.Position = UDim2.fromOffset(0, visibleIndex * 116)
+					visibleIndex += 1
+				end
+			end
+		end
+		scroll.CanvasSize = UDim2.fromOffset(0, visibleIndex * 116)
 		if not loaded then
 			activeLine.Text = "Loading your saved quest progress..."
 			tracker.Text = "QUESTS LOADING  |  [J]"
