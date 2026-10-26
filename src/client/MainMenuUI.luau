@@ -189,7 +189,7 @@ function Menu.Init(player,gui)
 		redrawDetail()
 	end
 	for _,attr in {"Level","XP","XPToNext","RiftCoins","EquippedSpec",
-		"NPCKills","AbyssClears","SpecMastery_AshleySimmons","SpecMastery_VoidDisciple"} do
+		"NPCKills","AbyssClears","SpecMastery_AshleySimmons","SpecMastery_VoidDisciple","SpecMastery_GreatSword"} do
 		player:GetAttributeChangedSignal(attr):Connect(refreshSummary)
 	end
 	refreshSummary()
