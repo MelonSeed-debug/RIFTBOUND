@@ -171,7 +171,7 @@ local function playAsset(character, s, move)
 			other:Stop(0.06)
 		end
 	end
-	track:Play(0.06, 1, 1)
+	track:Play(0.06, 1, (Config.PlaybackSpeeds and Config.PlaybackSpeeds[move]) or 1)
 	return true
 end
 
