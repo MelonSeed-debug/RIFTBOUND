@@ -36,6 +36,12 @@ end
 
 function Shield.Damage(target, humanoid, amount)
 	if not humanoid or humanoid.Health <= 0 or amount <= 0 then return 0 end
+	-- Damage resistance is calculated on the server before shield absorption.
+	local resistanceEnds = target:GetAttribute("BuzzBoostEnds")
+	local resistance = target:GetAttribute("BuzzBoostResistance")
+	if typeof(resistanceEnds) == "number" and workspace:GetServerTimeNow() < resistanceEnds and typeof(resistance) == "number" then
+		amount *= 1 - math.clamp(resistance, 0, 0.9)
+	end
 	local hp = target:GetAttribute("PillShieldHP")
 	local expires = target:GetAttribute("PillShieldEnds")
 	if typeof(hp) == "number" and hp > 0 and typeof(expires) == "number" and workspace:GetServerTimeNow() < expires then
