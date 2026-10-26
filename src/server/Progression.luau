@@ -7,6 +7,7 @@ local DataStoreService = game:GetService("DataStoreService")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 
 local cfg = require(ReplicatedStorage.Riftbound.Shared.LevelConfig)
+local questCfg = require(ReplicatedStorage.Riftbound.Shared.QuestConfig)
 local feedback = ReplicatedStorage.Riftbound.Remotes:FindFirstChild("ProgressionFX")
 local Progression = {}
 local profiles = {}
@@ -37,6 +38,15 @@ local function publish(player, p)
 	player:SetAttribute("LevelCap", cfg.MaxLevel)
 	player:SetAttribute("ProgressLoaded", p.loaded)
 	player:SetAttribute("ProgressSavingEnabled", p.canSave)
+	player:SetAttribute("QuestActiveId", p.questActive)
+	player:SetAttribute("QuestCount", p.questCount)
+	local activeDefinition = questCfg.Quests[p.questActive]
+	player:SetAttribute("QuestGoal", activeDefinition and activeDefinition.Count or 0)
+	player:SetAttribute("QuestReadyToClaim", activeDefinition ~= nil and p.questCount >= activeDefinition.Count)
+	for id in questCfg.Quests do
+		player:SetAttribute("QuestCompleted_" .. id, p.questCompleted[id] == true)
+	end
+	player:SetAttribute("QuestPermit_RiftInitiate", p.questPermits.RiftInitiate == true)
 end
 
 local function addXP(p, amount)
@@ -78,6 +88,22 @@ local function load(player, p)
 		p.xp = cleanInteger(saved.xp, 0, 1000000000, 0)
 		p.coins = cleanInteger(saved.coins, 0, 1000000000, 0)
 		p.kills = cleanInteger(saved.kills, 0, 1000000000, 0)
+		local quests = typeof(saved.quests) == "table" and saved.quests or {}
+		local requestedActive = typeof(quests.active) == "string" and quests.active or ""
+		p.questActive = questCfg.Quests[requestedActive] and requestedActive or ""
+		p.questCount = cleanInteger(quests.count, 0, 1000000, 0)
+		local savedCompletions = typeof(quests.completed) == "table" and quests.completed or {}
+		for id, definition in questCfg.Quests do
+			p.questCompleted[id] = not definition.Repeatable and savedCompletions[id] == true or false
+		end
+		local permits = typeof(quests.permits) == "table" and quests.permits or {}
+		p.questPermits.RiftInitiate = permits.RiftInitiate == true or p.questCompleted.RiftInitiation == true
+		local activeDefinition = questCfg.Quests[p.questActive]
+		if not activeDefinition or (not activeDefinition.Repeatable and p.questCompleted[p.questActive]) then
+			p.questActive, p.questCount = "", 0
+		else
+			p.questCount = math.min(p.questCount, activeDefinition.Count)
+		end
 		if p.level >= cfg.MaxLevel then
 			p.xp = 0
 		else
@@ -104,6 +130,7 @@ function Progression.Initialize(player)
 		level = 1, xp = 0, coins = 0, kills = 0,
 		loaded = false, canSave = false, dirty = false,
 		pendingXP = 0, pendingCoins = 0, pendingKills = 0,
+		questActive = "", questCount = 0, questCompleted = {}, questPermits = {},
 		revision = 0, saving = false,
 	}
 	profiles[player] = p
@@ -117,6 +144,15 @@ function Progression.AwardNPCDefeat(player, npcName)
 	if not p or not reward or not player.Parent then return false end
 	local xp, coins = reward.XP, reward.Coins
 	local levelsGained = applyReward(p, xp, coins, 1)
+	if p.loaded then
+		local activeDefinition = questCfg.Quests[p.questActive]
+		if activeDefinition and p.questCount < activeDefinition.Count
+			and (activeDefinition.Target == "Any" or activeDefinition.Target == npcName) then
+			p.questCount += 1
+			p.revision += 1
+			p.dirty = true
+		end
+	end
 	if not p.loaded then
 		p.pendingXP += xp
 		p.pendingCoins += coins
@@ -127,6 +163,55 @@ function Progression.AwardNPCDefeat(player, npcName)
 		feedback:FireClient(player, "NPCReward", npcName, xp, coins, levelsGained)
 	end
 	return true
+end
+
+-- Quest actions are server-validated, and the same DataStore snapshot persists
+-- quest completion and the Rift Initiate permit alongside XP and currency.
+function Progression.AcceptQuest(player, questId)
+	local p = profiles[player]
+	if not p or not p.loaded or typeof(questId) ~= "string" then return false, "Progress is still loading." end
+	local definition = questCfg.Quests[questId]
+	if not definition then return false, "Unknown quest." end
+	if p.questActive ~= "" then return false, "Finish or abandon your active quest first." end
+	if p.level < definition.RequiredLevel then return false, "Reach level " .. definition.RequiredLevel .. " first." end
+	if not definition.Repeatable and p.questCompleted[questId] then return false, "Quest already completed." end
+	p.questActive = questId
+	p.questCount = 0
+	p.revision += 1
+	p.dirty = true
+	publish(player, p)
+	return true, "Quest accepted: " .. definition.Name
+end
+
+function Progression.AbandonQuest(player)
+	local p = profiles[player]
+	if not p or not p.loaded or p.questActive == "" then return false, "No active quest." end
+	p.questActive = ""
+	p.questCount = 0
+	p.revision += 1
+	p.dirty = true
+	publish(player, p)
+	return true, "Quest abandoned."
+end
+
+function Progression.ClaimQuest(player)
+	local p = profiles[player]
+	if not p or not p.loaded then return false, "Progress is still loading." end
+	local id = p.questActive
+	local definition = questCfg.Quests[id]
+	if not definition or p.questCount < definition.Count then return false, "Quest objectives are incomplete." end
+	if not definition.Repeatable and p.questCompleted[id] then return false, "Quest already claimed." end
+
+	-- Clear first: a duplicate client request cannot collect twice.
+	p.questActive, p.questCount = "", 0
+	if not definition.Repeatable then p.questCompleted[id] = true end
+	if definition.Permit == "RiftInitiate" then p.questPermits.RiftInitiate = true end
+	local gained = applyReward(p, definition.XP, definition.Coins, 0)
+	publish(player, p)
+	if feedback then
+		feedback:FireClient(player, "QuestReward", definition.Name, definition.XP, definition.Coins, gained)
+	end
+	return true, "Quest completed: " .. definition.Name
 end
 
 function Progression.Save(player)
@@ -144,7 +229,13 @@ function Progression.Save(player)
 		xp = p.xp,
 		coins = p.coins,
 		kills = p.kills,
-		version = 1,
+		quests = {
+			active = p.questActive,
+			count = p.questCount,
+			completed = table.clone(p.questCompleted),
+			permits = table.clone(p.questPermits),
+		},
+		version = 2,
 	}
 	local success, err = pcall(function()
 		store:UpdateAsync("Player_" .. tostring(player.UserId), function()
