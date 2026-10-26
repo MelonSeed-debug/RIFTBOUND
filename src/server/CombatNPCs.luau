@@ -8,18 +8,28 @@ local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
 local combat = require(ReplicatedStorage.Riftbound.Shared.CombatConfig)
+local world = require(ReplicatedStorage.Riftbound.Shared.WorldConfig)
 local cfg = combat.NPC
 local combatFX = ReplicatedStorage.Riftbound.Remotes.CombatFX
 local random = Random.new()
 local NPCs = {}
 local started = false
 
-local TYPES = {
-	{ Name = "Street Brawler", Offset = Vector3.new(-12, 0, -24), Color = Color3.fromRGB(236, 112, 87), GuardChance = 0.13, Health = cfg.Health },
-	{ Name = "Street Guard", Offset = Vector3.new(12, 0, -24), Color = Color3.fromRGB(89, 159, 238), GuardChance = 0.58, Health = cfg.Health + 40 },
-	{ Name = "Rift Sentinel", Offset = Vector3.new(0, 0, -57), Color = Color3.fromRGB(160, 78, 243),
-		GuardChance = 0.38, Health = 450, AttackDamage = 17, AttackCooldown = 1.65, WalkSpeed = 13 },
-}
+local TYPES = {}
+for _, template in world.EnemySpawns do
+	table.insert(TYPES, {
+		Name = template.Name,
+		Id = template.Id,
+		Offset = template.Offset,
+		Color = template.Color,
+		GuardChance = template.GuardChance,
+		Health = template.Health,
+		AttackDamage = template.Damage,
+		AttackCooldown = template.Cooldown,
+		WalkSpeed = template.WalkSpeed,
+		RecommendedLevel = template.RecommendedLevel,
+	})
+end
 
 local function floorPosition(x, z, fallbackY, ignore)
 	local params = RaycastParams.new()
@@ -159,7 +169,8 @@ local function nearestPlayer(root, home)
 		local character = player.Character
 		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 		local targetRoot = character and character:FindFirstChild("HumanoidRootPart")
-		if humanoid and targetRoot and humanoid.Health > 0 then
+		if humanoid and targetRoot and humanoid.Health > 0
+			and character:GetAttribute("RiftSafeZone") ~= true then
 			local distance = (targetRoot.Position - root.Position).Magnitude
 			local homeDistance = (targetRoot.Position - home).Magnitude
 			if distance <= cfg.DetectRange and homeDistance <= cfg.LeashRange
@@ -178,7 +189,7 @@ local function setGuard(model, humanoid, active)
 	if active then
 		humanoid.WalkSpeed = cfg.GuardWalkSpeed
 	else
-		local speed = cfg.WalkSpeed
+		local speed = model:GetAttribute("RiftNPCWalkSpeed") or cfg.WalkSpeed
 		if (model:GetAttribute("Pill_ChillPill") or 0) > os.clock() then speed *= 0.75 end
 		if (model:GetAttribute("FrenzyDrowsinessEnds") or 0) > Workspace:GetServerTimeNow() then speed *= 0.65 end
 		humanoid.WalkSpeed = speed
@@ -319,6 +330,9 @@ local function spawnOne(folder, center, definition, hooks)
 	humanoid.Health = definition.Health
 	humanoid.WalkSpeed = definition.WalkSpeed or cfg.WalkSpeed
 	model:SetAttribute("RiftNPCAttackDamage", definition.AttackDamage or cfg.AttackDamage)
+	model:SetAttribute("RiftNPCWalkSpeed", definition.WalkSpeed or cfg.WalkSpeed)
+	model:SetAttribute("RiftNPCZone", definition.Id)
+	model:SetAttribute("RiftNPCRecommendedLevel", definition.RecommendedLevel)
 	humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
 	humanoid.AutoRotate = true
 	for _, child in model:GetDescendants() do
@@ -379,7 +393,7 @@ function NPCs.Start(hooks)
 			if not ok then warn("[RIFTBOUND NPC] Spawn failed for", definition.Name, err) end
 		end)
 	end
-	print("[RIFTBOUND NPC] Starting Street Brawler, Street Guard and Rift Sentinel.")
+	print("[RIFTBOUND NPC] Starting " .. tostring(#TYPES) .. " world encounters across all three districts.")
 end
 
 return NPCs
