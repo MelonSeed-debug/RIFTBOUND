@@ -140,7 +140,7 @@ function InventoryUI.Init(player,gui)
 
 	local function render()
 		for _,child in scroll:GetChildren() do
-			if child:IsA("Frame") then child:Destroy() end
+			if child:IsA("Frame") or child.Name=="EmptyRow" then child:Destroy() end
 		end
 		local bag=readBag()
 		coins.Text="RIFT COINS  "..tostring(player:GetAttribute("RiftCoins") or 0)
