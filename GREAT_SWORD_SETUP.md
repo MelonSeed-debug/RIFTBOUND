@@ -61,11 +61,11 @@ All skills are authorized server-side. Hitboxes, cooldowns, damage reduction, an
 ### Hit marker timing calibration
 
 From actual Great Sword KeyframeSequence `Hit` markers in the original file:
-- M1: 0.65 seconds → 0.12s server hitbox (5.42x playback)
-- M2: 0.65 → 0.12s (5.42x)
-- M3: 0.583 → 0.12s (4.86x)
-- M4: 0.633 → 0.12s (5.28x)
-- Greatsword Heavy: first 1.233 → 0.36s (3.43x)
+- M1: 0.65 seconds → 0.24s server hitbox (2.71x playback)
+- M2: 0.65 → 0.24s (2.71x)
+- M3: 0.583 → 0.24s (2.43x)
+- M4: 0.633 → 0.24s (2.64x)
+- Greatsword Heavy: first 1.233 → 0.55s (2.24x)
 - DashAttack: 0.40 → 0.16s (2.5x)
 - TitanBladeUpTilt: 0.54 → 0.26s (2.08x)
 - TitanBladeAirSlam: 0.422 → 0.42s (1.0x)
