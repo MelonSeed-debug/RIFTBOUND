@@ -88,13 +88,26 @@ The previous v4 saved mastery generated from NPC defeats is migrated once at **2
 - Old Spec selection no longer automatically pops up on spawn.
 - Existing shop dialogue still opens the Buy tab, while the main menu Inventory entry opens the bag.
 
-## Interface overlap fixes
+## Right-side skill list v0.3 — reference recreation
 
-- Large panels (Inventory, Quests, Specs, Map, World Guide, Story Dialogue) are **mutually exclusive**. Opening one closes the others.
-- The Void Disciple cooldowns now occupy a **five-slot center-top dock**, not the same bottom-left space as the health bars.
-- Mastery and health/shield displays have separate positions. Small viewport scaling reduces panel crowding, and the large dock is hidden in especially compact viewports.
-- Keys **I**, **J or P**, **M**, **B**, and **N** remain available; P is an additional quest shortcut.
-- Black/gold/Art Deco style remains active.
+- Inspired by the supplied screenshot: **orange mastery title, white move names, purple unlock requirements, dark beveled keycaps, and a slim XP bar**.
+- **No Friends Boost** component is created.
+- Moves and cooldowns are displayed on the **right side of the screen**, not the middle. Ashley Simmons and Void Disciple share the same five-row UI.
+- The displayed keys remain **Z, X, C, V, G** so they match our real existing server bindings. Unlock XP requirements are still **0 / 10 / 25 / 40 / 60**.
+- The sidebar uses live, server-replicated cooldown timestamps and mastery XP, while still allowing all movement and combat at the screen center.
+- The duplicate left mastery card and old centered Void HUD have been removed; the original left status bars and combat/loot notifications are retained.
+- When a large menu or NPC dialogue opens, the skills list hides to avoid covering text. It scales down on smaller displays, and compact touch screens keep their real on-screen skill buttons.
+- Large panels remain mutually exclusive; **M** is the main menu, **I** Inventory, **J/P** Quests, **B** World Guide, **N** Map.
+- UI is currently native Roblox frames and text, not an imported screenshot asset.
+
+### Right-side skill UI test
+
+1. Equip Ashley Simmons and check the right side of the screen: **Pill Shield / Buzz Boost / Rave Rush / Trippy Toss / Frenzy**.
+2. Verify the unlock requirements display **Mastery 0, 10, 25, 40, 60**, with a greyed key until unlocked.
+3. Use **Z**: confirm the ability status shows a cooldown, then READY, and the mastery XP bar advances.
+4. Equip Void Disciple: the same list should update to **Abyss Guard / Void Step / Shadow Grasp / Rift Cleave / Abyss Nova**.
+5. Press **M**, **I**, and **P** and talk to Dr. Liora or the Gilded Broker: the right-side list should get out of the way.
+6. On narrow windows, confirm the right-side list scales rather than overlaying your center crosshair or health bars.
 
 
 ## Abyss Citadel — first playable dungeon
