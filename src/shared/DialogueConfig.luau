@@ -1,7 +1,7 @@
 --!strict
 -- Story NPC dialogue is display-only. Server ProximityPrompts advance talk objectives.
 return {
-	Order = {"WardenVale","DrLiora","Kestrel","ForemanBrass","OracleNyx"},
+	Order = {"WardenVale","DrLiora","GildedBroker","Kestrel","ForemanBrass","OracleNyx"},
 	Actors = {
 		WardenVale = {
 			Name="WARDEN VALE",Role="Keeper of Haven",District="Haven",
@@ -24,6 +24,17 @@ return {
 			},
 			QuestHint="Completes THE FIRST SPARK when you have accepted it.",
 			QuestId="FirstSpark",Shop="Apothecary",
+		},
+		GildedBroker = {
+			Name="GILDED BROKER",Role="Gear merchant of Haven",District="Haven",
+			Position=Vector3.new(-66,0,-6),Color=Color3.fromRGB(241,203,92),
+			Lines={
+				"A proper set of gear changes a fight before the first punch.",
+				"Get your Iron Grips here. When you're experienced enough, the Gilded Crest is worth every Rift Coin.",
+				"Scrap and Rift Shards? I can exchange those for currency as well.",
+			},
+			QuestHint="Equip gear from your inventory. Materials can be sold at the shop.",
+			Shop="Gear",
 		},
 		Kestrel = {
 			Name="KESTREL",Role="Old Quarter Informant",District="OldQuarter",
