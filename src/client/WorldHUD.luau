@@ -122,7 +122,7 @@ function HUD.Init(player, gui)
 		makeLabel(group, entry.Description, UDim2.fromOffset(11,27),
 			UDim2.new(1,-18,0,23),11,colors.muted,false)
 	end
-	makeLabel(panel,"Explore the boulevard or press E at Haven's fast-travel pads.",
+	makeLabel(panel,"Cross island bridges, press N for the map, or E at travel pads.",
 		UDim2.fromOffset(15,301), UDim2.new(1,-25,0,23),11,colors.muted,false)
 
 	local toast = makeLabel(gui,"",UDim2.new(0.5,-190,0,95),
@@ -137,20 +137,20 @@ function HUD.Init(player, gui)
 		local id = player:GetAttribute("RiftZone") or "Haven"
 		if id == World.Hub.Id then
 			zoneName.Text = World.Hub.Name .. " / SAFE"
-			zoneInfo.Text = "NO HOSTILES  •  WORLD GUIDE [B]"
+			zoneInfo.Text = "SAFE HUB  •  [B] GUIDE  [N] MAP"
 			outline.Color = colors.safe
 			return
 		end
 		for _, zone in World.Zones do
 			if id == zone.Id then
 				zoneName.Text = zone.Name .. " / DANGER"
-				zoneInfo.Text = "LEVEL " .. zone.MinLevel .. "-" .. zone.MaxLevel .. "  •  WORLD GUIDE [B]"
+				zoneInfo.Text = "LEVEL " .. zone.MinLevel .. "-" .. zone.MaxLevel .. "  •  [B] GUIDE  [N] MAP"
 				outline.Color = zone.Color
 				return
 			end
 		end
-		zoneName.Text = "OUTSKIRTS"
-		zoneInfo.Text = "RETURN TO HAVEN  •  WORLD GUIDE [B]"
+		zoneName.Text = "ISLAND CAUSEWAY"
+		zoneInfo.Text = "BRIDGE ROUTE  •  [B] GUIDE  [N] MAP"
 		outline.Color = colors.muted
 	end
 	local function openGuide()
