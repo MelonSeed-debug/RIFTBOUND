@@ -4,16 +4,17 @@
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local UserInputService = game:GetService("UserInputService")
 local Registry = require(ReplicatedStorage.Riftbound.Shared.SpecRegistry)
+local Deco = require(script.Parent.ArtDecoUI)
 
 local Menu = {}
 local colors = {
-	background = Color3.fromRGB(17, 19, 34),
-	panel = Color3.fromRGB(30, 30, 54),
-	outline = Color3.fromRGB(104, 88, 151),
-	accent = Color3.fromRGB(226, 116, 247),
-	secondary = Color3.fromRGB(132, 209, 255),
-	text = Color3.fromRGB(249, 241, 255),
-	muted = Color3.fromRGB(174, 170, 191),
+	background = Deco.Ink,
+	panel = Deco.Slate,
+	outline = Deco.Bronze,
+	accent = Deco.Gold,
+	secondary = Deco.PaleGold,
+	text = Deco.Paper,
+	muted = Deco.Muted,
 }
 
 local function round(gui, radius)
@@ -49,8 +50,9 @@ local function button(parent, text, size, position, fill, fontSize)
 	item.Font = Enum.Font.GothamBold
 	item.TextSize = fontSize or 16
 	item.TextColor3 = colors.text
-	round(item, 9)
+	round(item, 4)
 	item.Parent = parent
+	Deco.Button(item)
 	return item
 end
 
@@ -75,9 +77,10 @@ function Menu.Init(player, request, gui)
 	panel.BorderSizePixel = 0
 	panel.Visible = false
 	panel.Parent = gui
-	round(panel, 14)
+	round(panel, 6)
+	Deco.Panel(panel)
 	local panelStroke = Instance.new("UIStroke")
-	panelStroke.Color = colors.outline
+	panelStroke.Color = colors.accent
 	panelStroke.Thickness = 2
 	panelStroke.Parent = panel
 
@@ -96,6 +99,7 @@ function Menu.Init(player, request, gui)
 	specCard.BorderSizePixel = 0
 	round(specCard, 11)
 	specCard.Parent = panel
+	Deco.Panel(specCard)
 
 	local ashley = Registry.Specs.AshleySimmons
 	label(specCard, ashley.Name, UDim2.new(1, -24, 0, 28), UDim2.fromOffset(13, 9), 19, colors.text, true)
@@ -112,6 +116,7 @@ function Menu.Init(player, request, gui)
 	upcoming.BackgroundColor3 = colors.panel
 	round(upcoming, 9)
 	upcoming.Parent = panel
+	Deco.Panel(upcoming)
 	label(upcoming, "VOID DISCIPLE", UDim2.new(1,-20,0,26),
 		UDim2.fromOffset(12,3), 14, colors.secondary, true)
 	local voidEquip = button(upcoming, "LOCKED", UDim2.fromOffset(134, 27),
