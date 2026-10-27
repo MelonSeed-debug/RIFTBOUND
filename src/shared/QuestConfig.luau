@@ -2,10 +2,35 @@
 -- RIFTBOUND quest board v0.1. Quest IDs never depend on display names.
 -- "Any" means any NPC with a reward entry in LevelConfig.Rewards.
 return {
-	Order = {"FirstSteps", "ShieldWall", "StreetPatrol", "RiftInitiation", "VoidTrial",
+	Order = {"ExploreWhisperingWoods", "ExploreCinderfall",
+		"ExploreHighlandRidge", "ExploreShatteredVerge",
+		"FirstSteps", "ShieldWall", "StreetPatrol", "RiftInitiation", "VoidTrial",
 		"FoundrySweep", "ForgeLockdown", "RiftRecon", "RavagerHunt",
 		"FirstSpark", "MarketWhispers", "FoundrySecret", "VeilVoices", "AbyssHeart"},
 	Quests = {
+		-- Starter overworld objective templates. These require only entering
+		-- locations validated by the SERVER zone tracker: no NPC dialogue,
+		-- kill-farming, equipment purchases or storyline prerequisites.
+		ExploreWhisperingWoods = {
+			Name="Into the Woods",Description="Follow the western road into Whispering Woods.",
+			RequiredLevel=1,Target="Enter:WhisperingWoods",Count=1,
+			XP=95,Coins=35,Repeatable=false,Category="Exploration",
+		},
+		ExploreCinderfall = {
+			Name="Across the Ash",Description="Travel along the east road and discover Cinderfall.",
+			RequiredLevel=10,Target="Enter:Cinderfall",Count=1,
+			XP=230,Coins=75,Repeatable=false,Category="Exploration",
+		},
+		ExploreHighlandRidge = {
+			Name="Highland Ascent",Description="Find the northern trail to Highland Ridge.",
+			RequiredLevel=20,Target="Enter:HighlandRidge",Count=1,
+			XP=520,Coins=140,Repeatable=false,Category="Exploration",
+		},
+		ExploreShatteredVerge = {
+			Name="At the World's Edge",Description="Discover the Shattered Verge on the northeast path.",
+			RequiredLevel=35,Target="Enter:ShatteredVerge",Count=1,
+			XP=1100,Coins=310,Repeatable=false,Category="Exploration",
+		},
 		FirstSpark = {
 			Name="The First Spark",Description="Speak with Dr. Liora at the training field to learn about supplies.",
 			RequiredLevel=1,Target="Talk:DrLiora",Count=1,
