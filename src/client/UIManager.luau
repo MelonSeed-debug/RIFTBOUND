@@ -133,6 +133,9 @@ function Manager.Init(_,gui)
 		local tracker=gui:FindFirstChild("QuestTracker")
 		if tracker then
 			-- Stack below MENU; both are pinned to the same right margin.
+			-- Very narrow touch windows navigate via the M menu / J shortcut
+			-- instead of overlapping the profile and health bars.
+			tracker.Visible=w>=550
 			tracker.AnchorPoint=Vector2.new(1,0)
 			tracker.Position=UDim2.new(1,-margin,0,72)
 			applyScale(tracker,compact and 0.83 or 1,"QuestCompactScale")
