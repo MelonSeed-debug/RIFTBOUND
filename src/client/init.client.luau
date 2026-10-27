@@ -211,6 +211,8 @@ loadOptionalUI("InventoryUI")
 loadOptionalUI("DialogueUI")
 loadOptionalUI("MasteryHUD")
 loadOptionalUI("VitalsHUD")
+-- Open-world location display is optional and never gates combat UI startup.
+loadOptionalUI("ZoneHUD")
 
 -- Quest journal is optional: broken UI never disables attacks or Spec selection.
 local boardModule = script:FindFirstChild("QuestBoard") or script:WaitForChild("QuestBoard", 3)
