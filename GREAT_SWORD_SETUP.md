@@ -27,6 +27,19 @@ I inspected **150+ Weapon Animations & Models.rbxm** directly. The Great Sword i
 
 The project does **not** contain published Roblox IDs for these clips. Studio can preview imported KeyframeSequences; publishing them under your game's owner/group is required for the live experience.
 
+## My original pack is in Workspace but I can't see the sword in my hand
+
+**Importing the weapon pack does not equip a weapon.** The original source folder is already supported: the server can clone `Great Sword Animations > Abyssal Covenant` directly, without needing to run the asset extractor first.
+
+1. Stop Play; make sure the latest GitHub `src/server/GreatSwordMoves.luau`, `src/shared/GreatSwordSpec.luau`, `src/client/SpecMenu.luau`, and `src/server/init.server.luau` were synced through Rojo.
+2. In Studio Edit mode, keep the original **150+ Weapon Animations & Models** folder inside Workspace or ReplicatedStorage (its **Great Sword Animations** child must be visible in Explorer), save the place.
+3. Start **Server & Clients**, press **M**, choose **SPECS**, then click the **EQUIP SWORD** button under **ABYSSAL COVENANT**. The sword never auto-equips just because the model was imported.
+4. Check the footer of the Specs panel. It now shows **SWORD: Abyssal Covenant model attached.**, **Temporary sword model attached.**, **R15 required: right hand missing.**, or **GreatSwordMoves not loaded. Restart Rojo and reconnect Studio.**
+5. Open **View > Output** and look for `[RIFTBOUND Sword]` lines. If the equipped Spec is correct but the sword still isn't visible, send a screenshot of the panel footer AND the first red Output error.
+6. Ensure the game uses an R15 avatar (a RightHand part must exist in your character). R6 avatars cannot hold this imported R15 sword.
+
+A late Rojo sync or bad imported model no longer silently suppresses attachment: the updated server waits for the sword module, reports missing files, and tries the fallback model on error. This has been **statically checked**, not playtested in Studio.
+
 ## Install it (no extra ZIP needed!)
 
 These are **two separate items**: code from GitHub, and the original `.rbxm` asset pack.
