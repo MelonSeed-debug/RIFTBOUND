@@ -149,6 +149,14 @@ function Menu.Init(player, request, gui)
 		status.Text = equipped == "AshleySimmons" and "EQUIPPED: ASHLEY SIMMONS"
 			or (equipped == "VoidDisciple" and "EQUIPPED: VOID DISCIPLE"
 				or (equipped == "GreatSword" and "EQUIPPED: GREAT SWORD" or "EQUIPPED: UNARMED"))
+		if equipped == "GreatSword" then
+			local info = player:GetAttribute("GreatSwordEquipStatus")
+			footer.Text = typeof(info) == "string" and info ~= ""
+				and ("SWORD: " .. info)
+				or "SWORD: equipping... Verify R15 and Rojo sync."
+		else
+			footer.Text = "Great Sword is ready in Specs; choose EQUIP SWORD to wield it."
+		end
 		if equipped == "AshleySimmons" then
 			equip.Text = "CURRENTLY EQUIPPED"
 			equip.BackgroundColor3 = colors.outline
@@ -227,6 +235,7 @@ function Menu.Init(player, request, gui)
 	player:GetAttributeChangedSignal("QuestPermit_RiftInitiate"):Connect(refresh)
 	player:GetAttributeChangedSignal("SpecUnlocked_VoidDisciple"):Connect(refresh)
 	player:GetAttributeChangedSignal("SpecUnlocked_GreatSword"):Connect(refresh)
+	player:GetAttributeChangedSignal("GreatSwordEquipStatus"):Connect(refresh)
 	player:GetAttributeChangedSignal("Level"):Connect(refresh)
 	refresh()
 	-- All navigation goes through MENU [M], never force Specs open on spawn.
