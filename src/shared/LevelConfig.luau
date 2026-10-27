@@ -7,6 +7,16 @@ LevelConfig.MaxLevel = 50
 LevelConfig.StartLevel = 1
 LevelConfig.CurrencyName = "Rift Coins"
 LevelConfig.Rewards = {
+	-- Curated four-region overworld encounters. Rewards are modest:
+	-- exploration/ability mastery, not repetitive enemy farming, drive play.
+	["Rootbound Scout"] = {XP = 40, Coins = 9},
+	["Thornback Guardian"] = {XP = 75, Coins = 16},
+	["Cinder Strider"] = {XP = 120, Coins = 24},
+	["Ashforged Bulwark"] = {XP = 195, Coins = 37},
+	["Stonewatch Sentinel"] = {XP = 240, Coins = 51},
+	["Gale Hunter"] = {XP = 290, Coins = 59},
+	["Riftstalker"] = {XP = 395, Coins = 75},
+	["Voidbound Knight"] = {XP = 580, Coins = 110},
 	["Street Brawler"] = {XP = 80, Coins = 18},
 	["Street Guard"] = {XP = 115, Coins = 28},
 	["Scrap Enforcer"] = {XP = 180, Coins = 48},
