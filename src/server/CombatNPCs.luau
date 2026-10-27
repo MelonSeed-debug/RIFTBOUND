@@ -29,6 +29,7 @@ for _, template in world.EnemySpawns do
 		AttackCooldown = template.Cooldown,
 		WalkSpeed = template.WalkSpeed,
 		RecommendedLevel = template.RecommendedLevel,
+		Archetype = template.Archetype or "Guardian",
 	})
 end
 
@@ -197,7 +198,7 @@ local function setGuard(model, humanoid, active)
 	end
 end
 
-local function telegraph(model)
+local function telegraph(model, windup)
 	local glow = Instance.new("Highlight")
 	glow.Name = "IncomingNPCAttack"
 	glow.FillColor = Color3.fromRGB(255, 126, 77)
@@ -205,19 +206,21 @@ local function telegraph(model)
 	glow.FillTransparency = 0.35
 	glow.OutlineTransparency = 0.1
 	glow.Parent = model
-	task.delay(cfg.AttackWindup + 0.12, function()
+	task.delay(windup + 0.12, function()
 		if glow.Parent then glow:Destroy() end
 	end)
 	combatFX:FireAllClients("NPCWindup", model)
 end
 
 local function attemptAttack(model, humanoid, root, player, targetCharacter, targetHumanoid, targetRoot, hooks)
-	telegraph(model)
-	task.delay(cfg.AttackWindup, function()
+	local windup = model:GetAttribute("RiftNPCAttackWindup") or cfg.AttackWindup
+	local reach = model:GetAttribute("RiftNPCAttackRange") or cfg.AttackRange
+	telegraph(model, windup)
+	task.delay(windup, function()
 		if not model.Parent or humanoid.Health <= 0 or (model:GetAttribute("RiftNPCStunnedUntil") or 0) > os.clock() then return end
 		if player.Character ~= targetCharacter or not targetRoot.Parent or targetHumanoid.Health <= 0 then return end
 		local difference = targetRoot.Position - root.Position
-		if difference.Magnitude > cfg.AttackRange + 0.75 or difference.Magnitude < 0.1 then return end
+		if difference.Magnitude > reach + 0.75 or difference.Magnitude < 0.1 then return end
 		-- Walls and solid obstacles interrupt attacks; the server decides hit validity.
 		local rayParams = RaycastParams.new()
 		rayParams.FilterType = Enum.RaycastFilterType.Exclude
@@ -266,6 +269,9 @@ local function runAI(model, humanoid, root, home, definition, hooks)
 		local nextAttack = 0
 		local nextDecision = 0
 		local guardUntil = 0
+		local nextSidestep = 0
+		local archetype = definition.Archetype or "Guardian"
+		local reach = model:GetAttribute("RiftNPCAttackRange") or cfg.AttackRange
 		while model.Parent and humanoid.Health > 0 do
 			local current = os.clock()
 			local stunned = (model:GetAttribute("RiftNPCStunnedUntil") or 0) > current
@@ -287,10 +293,23 @@ local function runAI(model, humanoid, root, home, definition, hooks)
 					setGuard(model, humanoid, false)
 					guardUntil = 0
 				end
-				if distance > cfg.AttackRange - 1 then
+				if distance > reach - 1 then
 					humanoid:MoveTo(targetRoot.Position)
 				else
-					humanoid:MoveTo(root.Position)
+					-- Skirmishers circle and sidestep between attacks while
+					-- guardians hold their ground and prepare to block. Both
+					-- remain inside the leash around their spawn location.
+					if archetype == "Skirmisher" and current >= nextSidestep
+						and distance > 2.4 and distance < 10 then
+						nextSidestep = current + random:NextNumber(1.3, 2.4)
+						local side = random:NextNumber() > 0.5 and 1 or -1
+						local goal = root.Position + targetRoot.CFrame.RightVector * (6 * side)
+						if (goal - home).Magnitude < cfg.LeashRange - 10 then
+							humanoid:MoveTo(goal)
+						end
+					elseif archetype ~= "Skirmisher" then
+						humanoid:MoveTo(root.Position)
+					end
 					local flat = Vector3.new(targetRoot.Position.X, root.Position.Y, targetRoot.Position.Z)
 					if (flat - root.Position).Magnitude > 0.05 then
 						root.CFrame = CFrame.lookAt(root.Position, flat)
@@ -336,6 +355,11 @@ local function spawnOne(folder, center, definition, hooks)
 	humanoid.Health = definition.Health
 	humanoid.WalkSpeed = definition.WalkSpeed or cfg.WalkSpeed
 	model:SetAttribute("RiftNPCAttackDamage", definition.AttackDamage or cfg.AttackDamage)
+	model:SetAttribute("RiftNPCArchetype", definition.Archetype or "Guardian")
+	model:SetAttribute("RiftNPCAttackRange", definition.AttackRange or cfg.AttackRange)
+	model:SetAttribute("RiftNPCAttackWindup",
+		definition.Archetype == "Skirmisher" and 0.43 or
+		(definition.Archetype == "Guardian" and 0.7 or cfg.AttackWindup))
 	model:SetAttribute("RiftNPCWalkSpeed", definition.WalkSpeed or cfg.WalkSpeed)
 	model:SetAttribute("RiftNPCZone", definition.Id)
 	model:SetAttribute("RiftNPCRecommendedLevel", definition.RecommendedLevel)
@@ -396,7 +420,7 @@ function NPCs.Start(hooks)
 
 	-- Keep server-controlled challenge/boss spawning functional while removing
 	-- the repetitive ambient bandits and enemies from the flat field.
-	if cfg.Enabled == false then
+	if cfg.Enabled == false or world.EnableWorldEnemies == false then
 		local previous = Workspace:FindFirstChild("RIFTBOUND Enemies")
 		if previous then previous:Destroy() end
 		print("[RIFTBOUND NPC] Roaming enemies disabled; scripted boss encounters available.")
@@ -410,14 +434,20 @@ function NPCs.Start(hooks)
 		folder.Parent = Workspace
 	end
 	local spawn = Workspace:FindFirstChildWhichIsA("SpawnLocation", true)
-	local center = spawn and spawn.Position or Vector3.new(0, 0, 0)
+	local generated = Workspace:FindFirstChild(world.WorldName)
+	local center = generated and Vector3.new(
+		generated:GetAttribute("SpawnX") or 0,
+		generated:GetAttribute("GroundY") or 0,
+		generated:GetAttribute("SpawnZ") or 0)
+		or (spawn and spawn.Position or Vector3.zero)
 	for _, definition in TYPES do
 		task.spawn(function()
 			local ok, err = pcall(spawnOne, folder, center, definition, hooks)
 			if not ok then warn("[RIFTBOUND NPC] Spawn failed for", definition.Name, err) end
 		end)
 	end
-	print("[RIFTBOUND NPC] Starting " .. tostring(#TYPES) .. " world encounters across all three districts.")
+	print("[RIFTBOUND NPC] Starting " .. tostring(#TYPES) ..
+		" curated enemies across the four open-world biomes.")
 end
 
 -- DungeonService can spawn a one-shot encounter with the existing rig and
