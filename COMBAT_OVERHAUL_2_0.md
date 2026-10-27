@@ -6,7 +6,7 @@ This is an **incremental improvement**, not a replacement for the RPG, three Spe
 
 **Server-authoritative swept hitboxes** — `src/server/CombatHitbox.luau` now gathers unique valid Humanoid targets across three slightly rotated hitboxes along a short arc at the server's impact frame. This handles near-edge sidesteps and weapon models nested inside an R15 character. Its query does not accept client-supplied target lists, damage, coordinates or timing. Each target can be hit only once per attack.
 
-**Combo rhythm** — Unarmed keeps a quicker four-hit chain and a shorter reset window. Great Sword uses its tuned 0.24-second M1 swing hit marker and longer combo window; its heavy windup is 0.55 seconds with a longer recovery. Extra sword range/damage remains server-only. Attacks carry an internal serial so a stunned character cannot finish a previously scheduled swing.
+**Combo rhythm and input buffering** — Unarmed keeps a quicker four-hit chain and a shorter reset window. Great Sword uses its tuned 0.24-second M1 swing hit marker and longer combo window; its heavy windup is 0.55 seconds with a longer recovery. A single M1 click within the **final 240ms of recovery** can be buffered to continue a chain without dropped inputs; earlier button mashing cannot queue infinite auto-attacks. The buffer cancels on stun, Spec change or respawn. Extra sword range/damage remains server-only. Attacks carry an internal serial so a stunned character cannot finish a previously scheduled swing.
 
 **True server hitstun** — Valid M1 and heavy damage temporarily block the victim's M1, R, F, Q and Z/X/C/V/G starts. The defender's combat state is cancelled, and movement is briefly slowed. Repeated hits refresh the stun deadline without permanently capturing the reduced walk speed. NPCs also honor the hitstun. A Studio training dummy remains an endlessly reusable practice target and does not become permanently stunned.
 
@@ -27,6 +27,7 @@ This is an **incremental improvement**, not a replacement for the RPG, three Spe
 ## Tests to run
 
 - [ ] With no Spec equipped, left-click four times: normal hits deal 7/7/9/12 base damage. The fourth attack has a finisher delay and knockback.
+- [ ] Click M1 up to 240ms before its next swing is ready: the input should buffer **once** and fire at the correct time. Hold/click-spam rapidly: it must not bypass normal attack cooldowns or queue an endless combo.
 - [ ] Equip Great Sword from M → SPECS. Its sword M1 should have longer reach and slower recovery than unarmed. It should still only damage one target once per swing, even though the query sweeps three slightly different angles.
 - [ ] Swing at another player who moves sideways slightly. A clearly in-range attack near the side of the arc should hit more reliably than the old single-box version.
 - [ ] Hold F before being attacked head-on: regular M1 shows BLOCKED and deals no damage. Attack from directly behind: guard should not work.
