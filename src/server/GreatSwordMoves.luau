@@ -171,10 +171,13 @@ local function attach(character, forceFallback)
 		model.Name = "RIFTBOUND Equipped Sword"
 		grip = model:FindFirstChild("Main")
 	end
-	-- Remove the source dummy rig's Motor6D: it can still refer to the
-	-- original mannequin's limbs, which would break real player equipment.
+	-- Remove source mannequin joints and existing rigid constraints.
+	-- We rebuild sword internal welds and one RightHand grip below; reusing
+	-- old pack constraints could leave a sword attached to its dummy rig.
 	for _, obj in model:GetDescendants() do
-		if obj:IsA("Motor6D") or obj:IsA("Script") or obj:IsA("LocalScript") then
+		if obj:IsA("Motor6D") or obj:IsA("WeldConstraint")
+			or obj:IsA("Weld") or obj:IsA("ManualWeld")
+			or obj:IsA("Script") or obj:IsA("LocalScript") then
 			obj:Destroy()
 		elseif obj:IsA("BasePart") then
 			obj.Anchored = false
