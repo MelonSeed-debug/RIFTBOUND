@@ -133,10 +133,6 @@ function Manager.Init(_,gui)
 			menuButton.Visible=true
 		end
 
-		local hint=gui:FindFirstChild("ControlsHint")
-		if hint then
-			hint.Visible=not compact
-		end
 	end
 
 	local function bindCamera(camera)
