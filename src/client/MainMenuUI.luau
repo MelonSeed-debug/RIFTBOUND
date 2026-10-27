@@ -125,6 +125,7 @@ function Menu.Init(player,gui)
 				.." / "..tostring(player:GetAttribute("XPToNext") or 0)
 				.."\n\nRIFT COINS   "..tostring(player:GetAttribute("RiftCoins") or 0)
 				.."\n\nEQUIPPED SPEC   "..(equipped and equipped.Name or "Unarmed")
+				.."\n\nPROFILE STATUS   "..tostring(player:GetAttribute("ProgressLoadState") or "Connecting")
 				.."\n\nNPC DEFEATS   "..tostring(player:GetAttribute("NPCKills") or 0)
 				.."\n\nABYSS CITADEL CLEARS   "..tostring(player:GetAttribute("AbyssClears") or 0)
 		elseif detailPage=="Mastery" then
@@ -185,18 +186,27 @@ function Menu.Init(player,gui)
 	local function refreshSummary()
 		local level=player:GetAttribute("Level") or 1
 		local coins=player:GetAttribute("RiftCoins") or 0
-		stat.Text="LEVEL "..level.."    /    "..coins.." RIFT COINS"
+		local mode=player:GetAttribute("ProgressLoadState")
+		local suffix=mode=="Session" and "   /   UNSAVED SESSION"
+			or (mode=="Offline" and "   /   PROFILE OFFLINE"
+			or (mode=="Loading" and "   /   CONNECTING" or ""))
+		stat.Text="LEVEL "..level.."    /    "..coins.." RIFT COINS"..suffix
 		redrawDetail()
 	end
 	for _,attr in {"Level","XP","XPToNext","RiftCoins","EquippedSpec",
-		"NPCKills","AbyssClears","SpecMastery_AshleySimmons","SpecMastery_VoidDisciple","SpecMastery_GreatSword"} do
+		"NPCKills","AbyssClears","ProgressLoadState","SpecMastery_AshleySimmons","SpecMastery_VoidDisciple","SpecMastery_GreatSword"} do
 		player:GetAttributeChangedSignal(attr):Connect(refreshSummary)
 	end
 	refreshSummary()
 	panel:GetPropertyChangedSignal("Visible"):Connect(function()
 		if panel.Visible then
 			detail.Visible=false
-			footer.Text="M  MENU    •    I  INVENTORY    •    P/J  QUESTS"
+			local mode=player:GetAttribute("ProgressLoadState")
+			footer.Text=mode=="Session"
+				and "UNSAVED SESSION    •    CHANGES WILL NOT PERSIST"
+				or (mode=="Offline"
+					and "PROGRESSION OFFLINE    •    CHECK SERVER OUTPUT"
+					or "M  MENU    •    I  INVENTORY    •    P/J  QUESTS")
 			refreshSummary()
 		end
 	end)
