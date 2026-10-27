@@ -237,6 +237,7 @@ local function attemptAttack(model, humanoid, root, player, targetCharacter, tar
 		if guarded then
 			if hooks.IsParrying and hooks.IsParrying(player) then
 				model:SetAttribute("RiftNPCStunnedUntil", os.clock() + combat.Block.ParryStun)
+				if hooks.RewardParry then hooks.RewardParry(player) end
 				combatFX:FireAllClients("Parry", targetCharacter)
 			else
 				combatFX:FireAllClients("BlockedHit", targetCharacter)
@@ -250,6 +251,9 @@ local function attemptAttack(model, humanoid, root, player, targetCharacter, tar
 
 		local damage = hooks.DealDamage(targetCharacter, targetHumanoid, amount)
 		if damage > 0 then
+			if hooks.ApplyHitstun then
+				hooks.ApplyHitstun(targetCharacter, 0.23)
+			end
 			combatFX:FireAllClients("Hit", targetCharacter, 0, math.round(damage * 10) / 10)
 		else
 			combatFX:FireAllClients("BlockedHit", targetCharacter)
