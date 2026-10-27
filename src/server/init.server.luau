@@ -287,8 +287,7 @@ local v2 = config.CombatV2 or {
 	UnarmedHitstun=0.18, SwordHitstun=0.28,
 	UnarmedFinisherHitstun=0.34, SwordFinisherHitstun=0.46,
 	HeavyHitstun=0.46, SwordHeavyHitstun=0.60,
-	CounterWindow=1.05, CounterDamageBonus=1.25,
-	SwordCounterDamageBonus=1.18, SwordComboResetTime=1.55,
+	SwordComboResetTime=1.55,
 	ParryStun=0.92,
 }
 local function getState(player)
@@ -297,7 +296,7 @@ local function getState(player)
 			combo=0, lastHit=0, nextM1=0, nextDash=0,
 			blocking=false, attacking=false,
 			nextHeavy=0, stunnedUntil=0, parryUntil=0, nextParry=0,
-			attackSerial=0, counterUntil=0, attackUntil=0,
+			attackSerial=0, attackUntil=0,
 			bufferedM1=false,
 		}
 	end
@@ -330,7 +329,6 @@ local function stagger(character, seconds)
 		s.blocking = false
 		s.combo = 0
 		s.parryUntil = 0
-		s.counterUntil = 0 -- a stunned defender forfeits an unspent punish
 		s.stunnedUntil = math.max(s.stunnedUntil, os.clock() + seconds)
 		character:SetAttribute("RiftBlocking", false)
 		-- CombatHitbox.Stagger owns the temporary 5 WalkSpeed lock and
@@ -338,15 +336,6 @@ local function stagger(character, seconds)
 		fx:FireAllClients("Block", character, false)
 	end
 	fx:FireAllClients("Stagger", character)
-end
-
--- Only the next VALID attack consumes the parry reward. One swing can hit
--- several targets, but the bonus is computed once, from server state.
-local function consumeCounter(s, sword)
-	local now = os.clock()
-	if now > s.counterUntil then return 1 end
-	s.counterUntil = 0
-	return sword and v2.SwordCounterDamageBonus or v2.CounterDamageBonus
 end
 
 local function guarded(target, targetRoot, attackerRoot)
@@ -359,7 +348,7 @@ end
 
 -- Uniform block -> perfect-parry -> guard-break -> damage flow. All outcomes
 -- are resolved from the target's CURRENT state at hit time, not attack start.
-local function strike(player, character, entry, damage, combo, heavy, stunTime, bonus)
+local function strike(player, character, entry, damage, combo, heavy, stunTime)
 	local target = entry.model
 	local hum = entry.humanoid
 	local targetRoot = entry.root
@@ -374,8 +363,7 @@ local function strike(player, character, entry, damage, combo, heavy, stunTime, 
 			-- A parry is earned ONLY when a server-validated hit meets guard
 			-- direction inside the 0.25s perfect-block window.
 			ds.parryUntil = 0
-			ds.counterUntil = os.clock() + v2.CounterWindow
-			stagger(character, v2.ParryStun)
+			d			stagger(character, v2.ParryStun)
 			fx:FireAllClients("Parry", target, combo)
 			return false
 		end
@@ -389,7 +377,7 @@ local function strike(player, character, entry, damage, combo, heavy, stunTime, 
 		return false
 	end
 
-	local dealt = Shield.Damage(target, hum, damage * bonus, player) or 0
+	local dealt = Shield.Damage(target, hum, damage, player) or 0
 	if dealt <= 0 then return false end
 	PillPassive.OnHit(player, target)
 	Void.OnHit(player, target)
@@ -480,8 +468,6 @@ local function m1(player)
 	s.attacking = true
 	s.attackSerial += 1
 	local serial = s.attackSerial
-	local bonus = consumeCounter(s, sword)
-	if bonus > 1 then fx:FireAllClients("Counter", character) end
 	fx:FireAllClients("Swing", character, combo)
 
 	if character:GetAttribute("FrenzyNausea") == true then
@@ -505,7 +491,7 @@ local function m1(player)
 				config.M1.Height, {FrontDot = sword and -0.12 or 0.02}) do
 				-- A successful parry cancels the attack mid-resolution.
 				if serial ~= s.attackSerial then break end
-				strike(player, character, target, damage, combo, false, stun, bonus)
+				strike(player, character, target, damage, combo, false, stun, 1)
 			end
 		end)
 	end
@@ -531,8 +517,6 @@ local function heavy(player)
 	s.attacking = true
 	s.attackSerial += 1
 	local serial = s.attackSerial
-	local bonus = consumeCounter(s, sword)
-	if bonus > 1 then fx:FireAllClients("Counter", character) end
 	fx:FireAllClients("HeavySwing", character)
 	if character:GetAttribute("FrenzyNausea") == true then
 		character:SetAttribute("FrenzyNausea", nil)
@@ -550,7 +534,7 @@ local function heavy(player)
 			for _, target in Hitbox.Scan(character, root, range, width,
 				config.Heavy.Height, {FrontDot = sword and -0.16 or 0.0}) do
 				if serial ~= s.attackSerial then break end
-				strike(player, character, target, damage, 5, true, stun, bonus)
+				strike(player, character, target, damage, 5, true, stun, 1)
 			end
 		end)
 	end
@@ -624,7 +608,6 @@ local function setup(player)
 		s.bufferedM1 = false
 		s.combo = 0
 		s.lastHit = 0
-		s.counterUntil = 0
 		s.blocking = false
 		s.parryUntil = 0
 		local character = player.Character
@@ -643,7 +626,6 @@ local function setup(player)
 		s.blocking,s.attacking = false,false
 		s.nextHeavy,s.stunnedUntil,s.parryUntil,s.nextParry = 0,0,0,0
 		s.attackSerial += 1
-		s.counterUntil = 0
 		s.attackUntil = 0
 		s.bufferedM1 = false
 		character:SetAttribute("RiftHitstunUntil",0)
@@ -753,8 +735,7 @@ task.defer(function()
 		RewardParry = function(player)
 			local s = getState(player)
 			s.parryUntil = 0
-			s.counterUntil = os.clock() + v2.CounterWindow
-		end,
+					end,
 		ApplyHitstun = function(character, duration)
 			stagger(character, duration)
 		end,
