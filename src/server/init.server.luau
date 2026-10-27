@@ -222,8 +222,14 @@ local function bootOptional(moduleName)
 	if not started then warn("[RIFTBOUND] Cannot start service:",moduleName,err) end
 end
 task.defer(function()
+	-- Keep prior economy/save services compatible, but do not introduce
+	-- story actors or prewritten dialogue until world design specifies them.
 	bootOptional("EconomyService")
-	bootOptional("WorldActors")
+	if worldCfg.EnableStoryActors == true then
+		bootOptional("WorldActors")
+	else
+		print("[RIFTBOUND World] NPC dialogue cast paused until author-approved.")
+	end
 end)
 
 local specRequest = rift.Remotes:WaitForChild("SpecRequest", 5)
@@ -764,5 +770,9 @@ end)
 -- Dungeon waits until the shared NPC module has been bootstrapped.
 task.defer(function()
 	task.wait(0.25)
-	bootOptional("DungeonService")
+	if worldCfg.EnableDungeon == true then
+		bootOptional("DungeonService")
+	else
+		print("[RIFTBOUND World] Legacy portal dungeon paused; open-world boss sites are foundations only.")
+	end
 end)
