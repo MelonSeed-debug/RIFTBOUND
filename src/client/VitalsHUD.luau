@@ -44,7 +44,8 @@ function HUD.Init(player,gui)
 	local panel=Instance.new("Frame")
 	panel.Name="ArtDecoVitals"
 	panel.Size=UDim2.fromOffset(325,145)
-	-- Keep vitals below the mastery card and well above the bottom control hints.
+	-- UIManager pins this below the left-side profile card on compact
+	-- screens, or to the bottom-left on desktop. No legacy hints overlap.
 	panel.Position=UDim2.new(0,15,1,-176)
 	panel.Parent=gui
 	Deco.Panel(panel)
@@ -71,11 +72,15 @@ function HUD.Init(player,gui)
 		local masteryLevel,masteryWithin,masteryRequired=Mastery.LevelDetails(mastery)
 		hpLabel.Text="HEALTH   "..math.ceil(hp).." / "..math.floor(maxHP)
 		local maxShield=spec=="VoidDisciple" and 100 or 150
-		shieldLabel.Text="SHIELD   "..math.floor(shield).." / "..maxShield
 		if expires<=workspace:GetServerTimeNow() then shield=0 end
-		masteryLabel.Text=masteryLevel>=Mastery.MaxLevel
-			and "MASTERY   MAX LEVEL"
-			or ("MASTERY LV "..masteryLevel.."   "..masteryWithin.." / "..masteryRequired.." XP")
+		shieldLabel.Text="SHIELD   "..math.floor(shield).." / "..maxShield
+		if spec=="None" or spec=="" then
+			masteryLabel.Text="MASTERY   EQUIP A SPEC"
+		elseif masteryLevel>=Mastery.MaxLevel then
+			masteryLabel.Text="MASTERY   MAX LEVEL"
+		else
+			masteryLabel.Text="MASTERY LV "..masteryLevel.."   "..masteryWithin.." / "..masteryRequired.." XP"
+		end
 		hpFill.Size=UDim2.fromScale(math.clamp(hp/math.max(1,maxHP),0,1),1)
 		shieldFill.Size=UDim2.fromScale(math.clamp(shield/maxShield,0,1),1)
 		masteryFill.Size=UDim2.fromScale(masteryRequired==0 and 1
@@ -95,7 +100,7 @@ function HUD.Init(player,gui)
 	player.CharacterAdded:Connect(bindCharacter)
 	if player.Character then task.spawn(bindCharacter,player.Character) end
 	player:GetAttributeChangedSignal("EquippedSpec"):Connect(update)
-	for _,id in {"AshleySimmons","VoidDisciple"} do
+	for _,id in {"AshleySimmons","VoidDisciple","GreatSword"} do
 		player:GetAttributeChangedSignal("SpecMastery_"..id):Connect(update)
 	end
 	-- Shield timeouts are handled by the server's attributes; this also refreshes
