@@ -502,32 +502,63 @@ Players.PlayerRemoving:Connect(function(player)
 end)
 
 if game:GetService("RunService"):IsStudio() then
-	local dummy = Instance.new("Model")
-	dummy.Name = "RIFTBOUND Training Dummy"
-	local hum = Instance.new("Humanoid")
-	hum.MaxHealth = 500
-	hum.Health = 500
-	hum.Parent = dummy
-	local root = Instance.new("Part")
-	root.Name = "HumanoidRootPart"
-	root.Size = Vector3.new(2,5,2)
+	-- This dummy is a repeatable COMBAT TARGET, not an enemy to grind.
+	-- A dead Humanoid cannot be reliably brought back with Health=MaxHealth;
+	-- that old code made M1s appear to stop dealing damage after ~500 HP.
 	local spawn = Workspace:FindFirstChildWhichIsA("SpawnLocation", true)
-		local location = spawn and spawn.Position or Vector3.new(0, 0, 0)
-		local worldFolder = Workspace:FindFirstChild("RIFTBOUND World")
-		local ground = worldFolder and worldFolder:GetAttribute("GroundY")
-		local offset = worldCfg.TrainingDummy or Vector3.new(0, 0, -12)
-		root.Position = Vector3.new(location.X + offset.X,
-			(typeof(ground) == "number" and ground + 4) or location.Y + 4,
-			location.Z + offset.Z)
-	root.Color = Color3.fromRGB(210,65,75)
-	root.Material = Enum.Material.Neon
-	root.Anchored = true
-	root.Parent = dummy
-	dummy.PrimaryPart = root
-	dummy.Parent = Workspace
-	hum.Died:Connect(function() task.delay(3,function() if dummy.Parent then hum.Health=hum.MaxHealth end end) end)
-end
+	local location = spawn and spawn.Position or Vector3.new(0, 0, 0)
+	local worldFolder = Workspace:FindFirstChild("RIFTBOUND World")
+	local ground = worldFolder and worldFolder:GetAttribute("GroundY")
+	local offset = worldCfg.TrainingDummy or Vector3.new(0, 0, -12)
+	local targetPosition = Vector3.new(location.X + offset.X,
+		(typeof(ground) == "number" and ground + 4) or location.Y + 4,
+		location.Z + offset.Z)
 
+	local function createTrainingDummy()
+		local dummy = Instance.new("Model")
+		dummy.Name = "RIFTBOUND Training Dummy"
+		dummy:SetAttribute("RiftTrainingDummy", true)
+		local hum = Instance.new("Humanoid")
+		hum.MaxHealth = 500
+		hum.Health = 500
+		hum.BreakJointsOnDeath = false
+		hum.Parent = dummy
+		local root = Instance.new("Part")
+		root.Name = "HumanoidRootPart"
+		root.Size = Vector3.new(2, 5, 2)
+		root.Position = targetPosition
+		root.Color = Color3.fromRGB(210, 65, 75)
+		root.Material = Enum.Material.Neon
+		root.Anchored = true
+		root.Parent = dummy
+		dummy.PrimaryPart = root
+		dummy.Parent = Workspace
+
+		-- Refill just before the 500-HP dummy would die, so repeated M1s,
+		-- sword combos and ability tests remain hittable without restarting Play.
+		hum.HealthChanged:Connect(function(health)
+			if health > 0 and health <= 85 and hum.Parent and dummy.Parent then
+				hum.Health = hum.MaxHealth
+			end
+		end)
+		-- Safety net if any oversized damage bypasses the refill threshold:
+		-- replace the DEAD Humanoid/model rather than trying to revive it.
+		hum.Died:Connect(function()
+			task.delay(1.5, function()
+				if not dummy.Parent then return end
+				dummy:Destroy()
+				createTrainingDummy()
+			end)
+		end)
+		return dummy
+	end
+
+	-- Studio Play can retain an obsolete dummy during script reloading.
+	local old = Workspace:FindFirstChild("RIFTBOUND Training Dummy")
+	if old then old:Destroy() end
+	createTrainingDummy()
+	print("[RIFTBOUND Training] Infinite practice dummy ready; health auto-refills.")
+end
 
 -- Spawn world encounter NPCs without coupling their startup to core combat.
 -- The Studio dummy and player combat continue working if this module is missing.
