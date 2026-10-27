@@ -8,6 +8,7 @@ local TweenService = game:GetService("TweenService")
 local Debris = game:GetService("Debris")
 local config = require(ReplicatedStorage.Riftbound.Shared.VoidDiscipleSpec)
 local shield = require(script.Parent.PillShield)
+local Hitbox = require(script.Parent.CombatHitbox)
 local fx = ReplicatedStorage.Riftbound.Remotes:WaitForChild("SpecFX")
 local Moves = {}
 
@@ -36,7 +37,8 @@ local function active(player)
 	local character = player.Character
 	local hum = character and character:FindFirstChildOfClass("Humanoid")
 	local root = character and character:FindFirstChild("HumanoidRootPart")
-	if not character or not hum or not root or hum.Health <= 0 then return nil end
+	if not character or not hum or not root or hum.Health <= 0
+		or Hitbox.IsStunned(character) then return nil end
 	return character, hum, root
 end
 
