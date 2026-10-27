@@ -297,7 +297,8 @@ local function getState(player)
 			combo=0, lastHit=0, nextM1=0, nextDash=0,
 			blocking=false, attacking=false,
 			nextHeavy=0, stunnedUntil=0, parryUntil=0, nextParry=0,
-			attackSerial=0, counterUntil=0,
+			attackSerial=0, counterUntil=0, attackUntil=0,
+			bufferedM1=false,
 		}
 	end
 	return states[player]
@@ -324,6 +325,8 @@ local function stagger(character, seconds)
 		local s = getState(player)
 		s.attackSerial += 1 -- instantly cancels unresolved server attack callbacks
 		s.attacking = false
+		s.attackUntil = 0
+		s.bufferedM1 = false
 		s.blocking = false
 		s.combo = 0
 		s.parryUntil = 0
@@ -439,9 +442,28 @@ end
 local function m1(player)
 	local s = getState(player)
 	local character = alive(player)
-	if not character or s.blocking or s.attacking or stunned(player, character) then return end
+	if not character or s.blocking or stunned(player, character) then return end
 	local now = os.clock()
-	if now < s.nextM1 then return end
+	if s.attacking or now < s.nextM1 then
+		-- One click near the END of recovery is buffered. Early mash spam
+		-- cannot queue an unlimited string of auto-attacks.
+		local readyAt = math.max(s.nextM1, s.attackUntil or 0)
+		local remaining = readyAt - now
+		if remaining > 0 and remaining <= v2.InputBuffer and not s.bufferedM1 then
+			s.bufferedM1 = true
+			local serial = s.attackSerial
+			local equipped = player:GetAttribute("EquippedSpec")
+			task.delay(remaining + 0.015, function()
+				s.bufferedM1 = false
+				if not player.Parent or player.Character ~= character
+					or s.attackSerial ~= serial
+					or player:GetAttribute("EquippedSpec") ~= equipped then return end
+				m1(player) -- still goes through all server guards/cooldowns
+			end)
+		end
+		return
+	end
+	s.bufferedM1 = false
 	local sword = player:GetAttribute("EquippedSpec") == "GreatSword" and swordSpec.Passive or nil
 	local resetWindow = sword and v2.SwordComboResetTime or config.M1.ComboResetTime
 	if now - s.lastHit > resetWindow then s.combo = 0 end
@@ -450,6 +472,7 @@ local function m1(player)
 	local combo = s.combo
 	local windup = sword and sword.M1Windup or config.M1.Windup
 	local recovery = sword and sword.M1Recovery or config.M1.Recovery
+	s.attackUntil = now + recovery
 	local cooldown = combo == 4 and (sword and sword.M1FinisherCooldown or config.M1.FinisherCooldown)
 		or (sword and sword.M1HitCooldown or config.M1.HitCooldown)
 	local slowAttack = (character:GetAttribute("Pill_MoodStabilizer") or 0) > now
@@ -501,6 +524,8 @@ local function heavy(player)
 	local cooldown = sword and sword.HeavyCooldown or config.Heavy.Cooldown
 	local windup = sword and sword.HeavyWindup or config.Heavy.Windup
 	local recovery = sword and sword.HeavyRecovery or config.Heavy.Recovery
+	s.attackUntil = now + recovery
+	s.bufferedM1 = false
 	local slowAttack = (character:GetAttribute("Pill_MoodStabilizer") or 0) > now
 	s.nextHeavy = now + cooldown * (slowAttack and (1 / 0.97) or 1)
 	s.attacking = true
@@ -596,6 +621,8 @@ local function setup(player)
 		s.nextHeavy,s.stunnedUntil,s.parryUntil,s.nextParry = 0,0,0,0
 		s.attackSerial += 1
 		s.counterUntil = 0
+		s.attackUntil = 0
+		s.bufferedM1 = false
 		character:SetAttribute("RiftHitstunUntil",0)
 		character:SetAttribute("RiftBlocking",false)
 		Shield.Clear(character)
