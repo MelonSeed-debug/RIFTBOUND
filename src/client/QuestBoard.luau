@@ -170,7 +170,7 @@ function QuestBoard.Init(player, gui)
 				message.Text = "UNSAVED SESSION: quests work, but progress won't persist."
 				message.TextColor3 = Color3.fromRGB(255, 199, 148)
 			elseif mode == "Saved" then
-				message.Text = "Story chapters available. Progress saves automatically."
+				message.Text = "Exploration objectives available. Progress saves automatically."
 				message.TextColor3 = colors.muted
 			else
 				message.Text = "Connecting to saved quest progress..."
@@ -180,14 +180,15 @@ function QuestBoard.Init(player, gui)
 		local active = player:GetAttribute("QuestActiveId") or ""
 		local count = player:GetAttribute("QuestCount") or 0
 		local activeQuest = Quests.Quests[active]
-		-- Show dialogue/story missions while the bandit-grind contracts are
-		-- paused. If a player saved an old contract, leave it visible so they
-		-- can abandon it without losing unrelated progression.
+		-- Open World 1.0 offers travel/discovery quests without story NPCs.
+		-- Retain a previously saved legacy active quest so it can be abandoned
+		-- without deleting its previous progress or completed history.
 		local visibleIndex = 0
 		for _, questId in Quests.Order do
 			local row = cards[questId]
 			if row then
-				local show = not World.PracticeMode or row.quest.Category == "Story" or questId == active
+				local show = not World.PracticeMode
+					or row.quest.Category == "Exploration" or questId == active
 				row.frame.Visible = show
 				if show then
 					row.frame.Position = UDim2.fromOffset(0, visibleIndex * 116)
@@ -212,8 +213,8 @@ function QuestBoard.Init(player, gui)
 		else
 			activeLine.Text = "No active quest - choose one below"
 			tracker.Text = mode == "Session"
-				and "STORY QUESTS  •  UNSAVED  [J]"
-				or "STORY QUESTS AVAILABLE  [J]"
+				and "WORLD QUESTS  •  UNSAVED  [J]"
+				or "WORLD QUESTS AVAILABLE  [J]"
 		end
 		for id, row in cards do
 			local done = player:GetAttribute("QuestCompleted_" .. id) == true
@@ -242,9 +243,14 @@ function QuestBoard.Init(player, gui)
 				(level < q.RequiredLevel and ("Requires Lv " .. q.RequiredLevel) or
 				(q.RequiredPermit and not hasPermit and "RIFT PERMIT REQUIRED" or
 				(not priorOK and "STORY CHAPTER LOCKED" or
-				(q.Category == "Story" and "STORY CHAPTER" or
-				(q.Repeatable and "REPEATABLE" or "ONE TIME")))))
+				(q.Category == "Exploration" and "DISCOVER A REGION" or
+					(q.Category == "Story" and "LEGACY STORY" or
+				(q.Repeatable and "REPEATABLE" or "ONE TIME"))))))
 		end
+	end
+
+	for _, id in Quests.Order do
+		player:GetAttributeChangedSignal("QuestCompleted_" .. id):Connect(refresh)
 	end
 
 	for _, attribute in {"Level", "ProgressLoaded", "ProgressLoadState",
