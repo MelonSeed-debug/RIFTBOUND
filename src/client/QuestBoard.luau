@@ -143,17 +143,40 @@ function QuestBoard.Init(player, gui)
 	message = text(panel, "Complete quests for XP and Rift Coins.", UDim2.new(1,-32,0,33),
 		UDim2.new(0,16,1,-43), 13, colors.muted, false)
 
-	local tracker = button(gui, "NO ACTIVE QUEST  |  [J]", UDim2.fromOffset(225, 48),
+	local tracker = button(gui, "NO ACTIVE QUEST  |  [J]", UDim2.fromOffset(236, 51),
 		UDim2.new(1,-237,0,112), colors.bg)
 	tracker.Name = "QuestTracker"
 	tracker.TextSize = 12
 	tracker.TextWrapped = true
 	tracker.Activated:Connect(function() panel.Visible = not panel.Visible end)
 
+	local lastLoadMode
 	local function refresh()
 		local level = player:GetAttribute("Level") or 1
 		local hasPermit = player:GetAttribute("QuestPermit_RiftInitiate") == true
 		local loaded = player:GetAttribute("ProgressLoaded") == true
+		local reported = player:GetAttribute("ProgressLoadState")
+		local mode = typeof(reported) == "string" and reported or
+			(loaded and (player:GetAttribute("ProgressSavingEnabled") == true
+				and "Saved" or "Session") or "Loading")
+		-- Explain *why* loading stopped, instead of suggesting a saved
+		-- profile when DataStore was blocked or the server module failed.
+		if mode ~= lastLoadMode then
+			lastLoadMode = mode
+			if mode == "Offline" then
+				message.Text = "Quest service offline. Re-sync Rojo and check Server Output."
+				message.TextColor3 = Color3.fromRGB(255, 162, 146)
+			elseif mode == "Session" then
+				message.Text = "UNSAVED SESSION: quests work, but progress won't persist."
+				message.TextColor3 = Color3.fromRGB(255, 199, 148)
+			elseif mode == "Saved" then
+				message.Text = "Story chapters available. Progress saves automatically."
+				message.TextColor3 = colors.muted
+			else
+				message.Text = "Connecting to saved quest progress..."
+				message.TextColor3 = colors.muted
+			end
+		end
 		local active = player:GetAttribute("QuestActiveId") or ""
 		local count = player:GetAttribute("QuestCount") or 0
 		local activeQuest = Quests.Quests[active]
@@ -174,15 +197,23 @@ function QuestBoard.Init(player, gui)
 		end
 		scroll.CanvasSize = UDim2.fromOffset(0, visibleIndex * 116)
 		if not loaded then
-			activeLine.Text = "Loading your saved quest progress..."
-			tracker.Text = "QUESTS LOADING  |  [J]"
+			if mode == "Offline" then
+				activeLine.Text = "Quest progression unavailable"
+				tracker.Text = "QUESTS OFFLINE  |  [J]"
+			else
+				activeLine.Text = "Connecting to saved quest progress..."
+				tracker.Text = "QUESTS CONNECTING  |  [J]"
+			end
 		elseif activeQuest then
 			activeLine.Text = activeQuest.Name .. "  " .. math.min(count,activeQuest.Count) .. "/" .. activeQuest.Count
 			tracker.Text = activeQuest.Name .. "  " .. math.min(count,activeQuest.Count)
 				.. "/" .. activeQuest.Count .. (count >= activeQuest.Count and " - CLAIM!" or "")
+			if mode == "Session" then tracker.Text ..= "  •  UNSAVED" end
 		else
 			activeLine.Text = "No active quest - choose one below"
-			tracker.Text = "QUESTS AVAILABLE  |  [J]"
+			tracker.Text = mode == "Session"
+				and "STORY QUESTS  •  UNSAVED  [J]"
+				or "STORY QUESTS AVAILABLE  [J]"
 		end
 		for id, row in cards do
 			local done = player:GetAttribute("QuestCompleted_" .. id) == true
@@ -190,7 +221,7 @@ function QuestBoard.Init(player, gui)
 			local priorOK = not q.PrerequisiteQuest
 				or player:GetAttribute("QuestCompleted_" .. q.PrerequisiteQuest) == true
 			if not loaded then
-				row.button.Text = "LOADING"
+				row.button.Text = mode == "Offline" and "OFFLINE" or "WAIT"
 			elseif done and not q.Repeatable then
 				row.button.Text = "DONE"
 			elseif id == active then
@@ -216,7 +247,8 @@ function QuestBoard.Init(player, gui)
 		end
 	end
 
-	for _, attribute in {"Level", "ProgressLoaded", "QuestActiveId", "QuestCount",
+	for _, attribute in {"Level", "ProgressLoaded", "ProgressLoadState",
+		"ProgressSavingEnabled", "QuestActiveId", "QuestCount",
 		"QuestCompleted_FirstSteps", "QuestCompleted_ShieldWall",
 		"QuestCompleted_StreetPatrol", "QuestCompleted_RiftInitiation",
 		"QuestCompleted_VoidTrial", "QuestPermit_RiftInitiate",
