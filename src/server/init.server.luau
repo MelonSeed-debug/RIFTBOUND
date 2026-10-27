@@ -365,7 +365,11 @@ local function block(player, active)
 		s.blocking = false
 		s.parryUntil = 0
 		character:SetAttribute("RiftBlocking", false)
-		humanoid.WalkSpeed = config.BaseWalkSpeed
+		if not stunned(player, character) then
+			humanoid.WalkSpeed = (character:GetAttribute("RaveRushEnds") or 0)
+				> Workspace:GetServerTimeNow() and config.BaseWalkSpeed * 1.5
+				or config.BaseWalkSpeed
+		end
 		fx:FireAllClients("Block", character, false)
 		return
 	end
