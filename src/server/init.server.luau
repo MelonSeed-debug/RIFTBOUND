@@ -276,13 +276,14 @@ local function stagger(character, seconds)
 		local s = getState(player)
 		s.attackSerial += 1 -- instantly cancels unresolved server attack callbacks
 		s.attacking = false
+		local wasBlocking = s.blocking
 		s.blocking = false
 		s.combo = 0
 		s.parryUntil = 0
 		s.stunnedUntil = math.max(s.stunnedUntil, os.clock() + seconds)
 		character:SetAttribute("RiftBlocking", false)
 		local hum = character:FindFirstChildOfClass("Humanoid")
-		if hum then hum.WalkSpeed = config.BaseWalkSpeed end
+		if hum and wasBlocking then hum.WalkSpeed = config.BaseWalkSpeed end
 		fx:FireAllClients("Block", character, false)
 	end
 	fx:FireAllClients("Stagger", character)
@@ -405,6 +406,7 @@ local function m1(player)
 	s.attackSerial += 1
 	local serial = s.attackSerial
 	local bonus = consumeCounter(s, sword)
+	if bonus > 1 then fx:FireAllClients("Counter", character) end
 	fx:FireAllClients("Swing", character, combo)
 
 	if character:GetAttribute("FrenzyNausea") == true then
@@ -453,6 +455,7 @@ local function heavy(player)
 	s.attackSerial += 1
 	local serial = s.attackSerial
 	local bonus = consumeCounter(s, sword)
+	if bonus > 1 then fx:FireAllClients("Counter", character) end
 	fx:FireAllClients("HeavySwing", character)
 	if character:GetAttribute("FrenzyNausea") == true then
 		character:SetAttribute("FrenzyNausea", nil)
