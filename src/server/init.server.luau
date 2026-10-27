@@ -614,6 +614,29 @@ local function setup(player)
 	AshleyMoves.ResetPlayer(player)
 	Void.ResetPlayer(player)
 	Sword.ResetPlayer(player)
+	player:GetAttributeChangedSignal("EquippedSpec"):Connect(function()
+		-- Equipping a new weapon during a swing cannot carry over damage,
+		-- input buffers, an active guard, or an old parry counter.
+		local s = getState(player)
+		s.attackSerial += 1
+		s.attacking = false
+		s.attackUntil = 0
+		s.bufferedM1 = false
+		s.combo = 0
+		s.lastHit = 0
+		s.counterUntil = 0
+		s.blocking = false
+		s.parryUntil = 0
+		local character = player.Character
+		if character then
+			character:SetAttribute("RiftBlocking", false)
+			if not Hitbox.IsStunned(character) then
+				local hum = character:FindFirstChildOfClass("Humanoid")
+				if hum then hum.WalkSpeed = config.BaseWalkSpeed end
+			end
+			fx:FireAllClients("Block", character, false)
+		end
+	end)
 	player.CharacterAdded:Connect(function(character)
 		local s = getState(player)
 		s.combo,s.lastHit,s.nextM1,s.nextDash = 0,0,0,0
