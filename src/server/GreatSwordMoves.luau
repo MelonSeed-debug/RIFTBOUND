@@ -11,6 +11,7 @@ local config = require(ReplicatedStorage.Riftbound.Shared.GreatSwordSpec)
 local Shield = require(script.Parent.PillShield)
 local Hitbox = require(script.Parent.CombatHitbox)
 local fx = ReplicatedStorage.Riftbound.Remotes.SpecFX
+local combatFX = ReplicatedStorage.Riftbound.Remotes.CombatFX
 
 local Sword = {}
 local states = setmetatable({}, {__mode = "k"})
@@ -72,7 +73,9 @@ local function hitTargets(player, character, position, size, damage, knockback, 
 				(targetRoot.Position - root.Position).Magnitude <= 25 then
 				local dealt = Shield.Damage(target, hum, damage, player) or 0
 				if dealt > 0 then
-					Hitbox.Stagger(target, math.clamp((damage or 0) / 120, 0.20, 0.6))
+					if Hitbox.Stagger(target, math.clamp((damage or 0) / 120, 0.20, 0.6)) then
+						combatFX:FireAllClients("Stagger", target)
+					end
 				end
 				if dealt > 0 and not targetRoot.Anchored and knockback and knockback > 0 then
 					targetRoot.AssemblyLinearVelocity =
