@@ -57,10 +57,10 @@ local CombatConfig = {
 	},
 
 	NPC = {
-		Enabled = false, -- No automatic bandit patrols during the flat-grass prototype.
-		StudioOnly = false, -- Opt-in scripted bosses remain possible via SpawnCustom.
-		DetectRange = 40,
-		LeashRange = 58,
+		Enabled = true, -- curated region encounters; never procedural endless bandit patrols
+		StudioOnly = false,
+		DetectRange = 55,
+		LeashRange = 78,
 		AttackRange = 5.6,
 		AttackWindup = 0.55,
 		AttackCooldown = 2.1,
@@ -69,7 +69,7 @@ local CombatConfig = {
 		GuardWalkSpeed = 6,
 		GuardDuration = 1.1,
 		DecisionInterval = 2.6,
-		RespawnDelay = 5,
+		RespawnDelay = 15, -- enough time to move on without an immediate respawn swarm
 		ThinkInterval = 0.25,
 		Health = 160,
 	},
