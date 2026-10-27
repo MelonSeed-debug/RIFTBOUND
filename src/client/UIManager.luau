@@ -72,6 +72,7 @@ function Manager.Init(_,gui)
 		local size=camera.ViewportSize
 		local w,h=size.X,size.Y
 		local compact=w<730
+		local margin=compact and 10 or 16
 
 		-- Inventory, quests, Specs and dialogue cannot
 		-- stack over one another, and scale to fit viewport height.
@@ -85,17 +86,29 @@ function Manager.Init(_,gui)
 			end
 		end
 
+		-- Two distinct, predictable HUD anchors. Keep status/XP at top-left,
+		-- and health at bottom-left on desktop. Stack on small viewports so
+		-- neither HUD clips or overlaps the Roblox topbar.
 		local progress=gui:FindFirstChild("ProgressionHUD")
-		applyScale(progress,math.min(1,math.max(0.55,(w-180)/320)),"ResponsiveStatsScale")
+		local statsScale=math.clamp((w-170)/320,0.56,1)
+		applyScale(progress,statsScale,"ResponsiveStatsScale")
+		if progress then
+			progress.AnchorPoint=Vector2.new(0,0)
+			progress.Position=UDim2.fromOffset(margin,14)
+		end
 
 		local vitals=gui:FindFirstChild("ArtDecoVitals")
 		if vitals then
-			local scale=math.min(1,math.max(0.57,(w-180)/325))
-			applyScale(vitals,scale,"ResponsiveVitalsScale")
-			vitals.Position=compact
-				and UDim2.new(0,15,0,276)
-				or (h<580 and UDim2.new(0,15,0,250)
-					or UDim2.new(0,15,1,-176))
+			local vitalsScale=math.clamp((w-170)/325,0.56,1)
+			applyScale(vitals,vitalsScale,"ResponsiveVitalsScale")
+			if h>=535 and w>=730 then
+				vitals.AnchorPoint=Vector2.new(0,1)
+				vitals.Position=UDim2.new(0,margin,1,-margin)
+			else
+				vitals.AnchorPoint=Vector2.new(0,0)
+				vitals.Position=UDim2.fromOffset(margin,
+					14+math.ceil(153*statsScale)+14)
+			end
 		end
 
 		-- The skills sidebar stays pinned to the RIGHT edge, never centered
@@ -119,17 +132,16 @@ function Manager.Init(_,gui)
 
 		local tracker=gui:FindFirstChild("QuestTracker")
 		if tracker then
-			tracker.Position=UDim2.new(1,-238,0,86)
-			if compact then
-				applyScale(tracker,0.72,"QuestCompactScale")
-			else
-				applyScale(tracker,1,"QuestCompactScale")
-			end
+			-- Stack below MENU; both are pinned to the same right margin.
+			tracker.AnchorPoint=Vector2.new(1,0)
+			tracker.Position=UDim2.new(1,-margin,0,72)
+			applyScale(tracker,compact and 0.83 or 1,"QuestCompactScale")
 		end
 
 		local menuButton=gui:FindFirstChild("MainMenuToggle")
 		if menuButton then
-			menuButton.Position=UDim2.new(1,-155,0,16)
+			menuButton.AnchorPoint=Vector2.new(1,0)
+			menuButton.Position=UDim2.new(1,-margin,0,14)
 			menuButton.Visible=true
 		end
 
