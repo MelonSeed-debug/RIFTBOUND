@@ -9,6 +9,7 @@ local TweenService = game:GetService("TweenService")
 local Debris = game:GetService("Debris")
 local config = require(ReplicatedStorage.Riftbound.Shared.GreatSwordSpec)
 local Shield = require(script.Parent.PillShield)
+local Hitbox = require(script.Parent.CombatHitbox)
 local fx = ReplicatedStorage.Riftbound.Remotes.SpecFX
 
 local Sword = {}
@@ -26,7 +27,8 @@ local function live(player)
 	local char = player.Character
 	local hum = char and char:FindFirstChildOfClass("Humanoid")
 	local root = char and char:FindFirstChild("HumanoidRootPart")
-	if not hum or not root or hum.Health <= 0 or char:GetAttribute("RiftBlocking") then
+	if not hum or not root or hum.Health <= 0 or char:GetAttribute("RiftBlocking")
+		or Hitbox.IsStunned(char) then
 		return nil
 	end
 	return char, hum, root
@@ -37,6 +39,7 @@ local function validCast(player, char)
 	return player.Character == char
 		and player:GetAttribute("EquippedSpec") == "GreatSword"
 		and char.Parent ~= nil and humanoid ~= nil and humanoid.Health > 0
+		and not Hitbox.IsStunned(char)
 end
 
 local function ready(player, key)
@@ -67,7 +70,10 @@ local function hitTargets(player, character, position, size, damage, knockback, 
 			if hum and targetRoot and hum.Health > 0 and
 				target:GetAttribute("RiftSafeZone") ~= true and
 				(targetRoot.Position - root.Position).Magnitude <= 25 then
-				local dealt = Shield.Damage(target, hum, damage, player)
+				local dealt = Shield.Damage(target, hum, damage, player) or 0
+				if dealt > 0 then
+					Hitbox.Stagger(target, math.clamp((damage or 0) / 120, 0.20, 0.6))
+				end
 				if dealt > 0 and not targetRoot.Anchored and knockback and knockback > 0 then
 					targetRoot.AssemblyLinearVelocity =
 						root.CFrame.LookVector * knockback + Vector3.new(0, vertical or 0, 0)
