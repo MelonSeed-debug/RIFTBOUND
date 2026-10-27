@@ -10,6 +10,7 @@ local TweenService = game:GetService("TweenService")
 local config = require(ReplicatedStorage.Riftbound.Shared.AshleySimmonsSpec)
 local combat = require(ReplicatedStorage.Riftbound.Shared.CombatConfig)
 local shield = require(script.Parent.PillShield)
+local Hitbox = require(script.Parent.CombatHitbox)
 local fx = ReplicatedStorage.Riftbound.Remotes.SpecFX
 local Moves = {}
 local states = {}
@@ -24,7 +25,7 @@ local function live(player)
 	local character = player.Character
 	local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 	local root = character and character:FindFirstChild("HumanoidRootPart")
-	if not humanoid or not root or humanoid.Health <= 0 then return nil end
+	if not humanoid or not root or humanoid.Health <= 0 or Hitbox.IsStunned(character) then return nil end
 	return character, humanoid, root
 end
 
