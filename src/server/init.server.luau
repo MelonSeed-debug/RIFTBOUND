@@ -11,6 +11,7 @@ local masteryCfg = require(rift.Shared.MasteryConfig)
 -- Sword tuning stays optional: a missing new file cannot break legacy combat.
 local swordSpec = {Passive = {}}
 local swordSpecModule = rift.Shared:FindFirstChild("GreatSwordSpec")
+	or rift.Shared:WaitForChild("GreatSwordSpec", 5)
 if swordSpecModule then
 	local ok, result = pcall(require, swordSpecModule)
 	if ok and type(result) == "table" then swordSpec = result end
@@ -102,13 +103,17 @@ local Sword = {
 	ResetPlayer = function() end,
 }
 local swordModule = script:FindFirstChild("GreatSwordMoves")
+	or script:WaitForChild("GreatSwordMoves", 5)
 if swordModule then
 	local ok, result = pcall(require, swordModule)
 	if ok and type(result) == "table" then
 		Sword = result
+		print("[RIFTBOUND Sword] GreatSwordMoves loaded successfully.")
 	else
 		warn("[RIFTBOUND] Great Sword module failed; legacy Specs still work:", result)
 	end
+else
+	warn("[RIFTBOUND Sword] GreatSwordMoves missing! Check Rojo sync and restart server.")
 end
 
 -- Optional registry-driven selection: failure must not disable combat or the dummy.
@@ -179,7 +184,8 @@ if specRequest then
 					Void.StopPlayerBuffs(player)
 					Sword.StopPlayerBuffs(player)
 				end
-				Sword.Refresh(player)
+				local attached, err = pcall(Sword.Refresh, player)
+				if not attached then warn("[RIFTBOUND Sword] Equip refresh failed:", err) end
 			end
 			return
 		end
