@@ -145,17 +145,23 @@ local function clearSword(character)
 	character:SetAttribute("RiftSwordEquipped", false)
 end
 
-local function attach(character)
-	if not character or not character.Parent then return end
-	if character:GetAttribute("RiftSwordEquipped") then return end
+local function attach(character, forceFallback)
+	if not character or not character.Parent then return false, "Character is not ready." end
+	local existing = character:FindFirstChild("RIFTBOUND Equipped Sword")
+	if character:GetAttribute("RiftSwordEquipped") and existing
+		and existing:FindFirstChild("Main", true)
+		and character:FindFirstChild("RightHand") then
+		return true, "Sword attached."
+	end
 	local hand = character:FindFirstChild("RightHand")
 	if not hand or not hand:IsA("BasePart") then
 		warn("[RIFTBOUND Sword] R15 RightHand missing. Check Game Settings > Avatar.")
-		return
+		return false, "R15 required: right hand missing."
 	end
 	clearSword(character)
-	local source = templateSword()
+	local source = not forceFallback and templateSword() or nil
 	local model = source and source:Clone() or fallbackModel()
+	if not model then return false, "Could not clone sword model." end
 	model.Name = "RIFTBOUND Equipped Sword"
 	local grip = model:FindFirstChild("Main",true)
 	if not grip or not grip:IsA("BasePart") then
@@ -204,15 +210,41 @@ local function attach(character)
 		warn("[RIFTBOUND Sword] Using visible fallback sword; import the original pack " ..
 			"or run INSTALL_GREAT_SWORD.lua in Studio for Abyssal Covenant mesh.")
 	end
+	return true, source and "Abyssal Covenant model attached." or "Temporary sword model attached."
 end
 
 function Sword.Refresh(player)
 	local character = player.Character
-	if not character then return end
-	if player:GetAttribute("EquippedSpec") == config.Id then
-		attach(character)
-	else
+	if not character or not character.Parent then
+		player:SetAttribute("GreatSwordEquipStatus", "Waiting for character to spawn.")
+		return
+	end
+	if player:GetAttribute("EquippedSpec") ~= config.Id then
 		clearSword(character)
+		player:SetAttribute("GreatSwordEquipStatus", "Not equipped.")
+		return
+	end
+	-- Never let a malformed imported model prevent the player from wielding
+	-- a sword. The fallback is a lightweight, guaranteed-visible model.
+	local ok, attached, reason = pcall(attach, character, false)
+	if not ok then
+		warn("[RIFTBOUND Sword] Original model failed; trying simple fallback:", attached)
+		attached, reason = false, "Original model attachment failed."
+	end
+	if not attached and character:FindFirstChild("RightHand") then
+		local retryOK, retryAttached, retryReason = pcall(attach, character, true)
+		if retryOK then
+			attached, reason = retryAttached, retryReason
+		else
+			warn("[RIFTBOUND Sword] Even fallback attachment failed:", retryAttached)
+			reason = "Sword attachment failed; check Studio Output."
+		end
+	end
+	player:SetAttribute("GreatSwordEquipStatus", reason or "Attachment status unknown.")
+	if attached then
+		print("[RIFTBOUND Sword]", player.Name, reason)
+	else
+		warn("[RIFTBOUND Sword]", player.Name, reason)
 	end
 end
 
@@ -335,7 +367,9 @@ function Sword.Start()
 			Sword.Refresh(player)
 		end)
 		player.CharacterAdded:Connect(function(character)
-			character:WaitForChild("RightHand", 5)
+			-- The old character cleanup may race against a freshly spawned
+			-- one; a delayed refresh ensures the R15 hand exists.
+			character:WaitForChild("RightHand", 8)
 			if player.Character == character then Sword.Refresh(player) end
 		end)
 		if player.Character then task.defer(Sword.Refresh,player) end
