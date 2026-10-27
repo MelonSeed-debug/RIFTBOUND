@@ -18,6 +18,7 @@ local World = {
 	EnableStoryActors = false,
 	EnableQuestStations = false,
 	EnableWorldEnemies = true,
+	EnableDungeon = false, -- legacy portal stays paused until boss-world AI is rebuilt
 
 	-- Used by the retained solo-combat test dummy, clear of the main road.
 	TrainingDummy = Vector3.new(25, 0, -36),
