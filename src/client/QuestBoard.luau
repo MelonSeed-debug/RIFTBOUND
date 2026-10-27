@@ -255,12 +255,7 @@ function QuestBoard.Init(player, gui)
 
 	for _, attribute in {"Level", "ProgressLoaded", "ProgressLoadState",
 		"ProgressSavingEnabled", "QuestActiveId", "QuestCount",
-		"QuestCompleted_FirstSteps", "QuestCompleted_ShieldWall",
-		"QuestCompleted_StreetPatrol", "QuestCompleted_RiftInitiation",
-		"QuestCompleted_VoidTrial", "QuestPermit_RiftInitiate",
-		"QuestCompleted_FirstSpark", "QuestCompleted_MarketWhispers",
-		"QuestCompleted_FoundrySecret", "QuestCompleted_VeilVoices",
-		"QuestCompleted_AbyssHeart"} do
+		"QuestPermit_RiftInitiate"} do
 		player:GetAttributeChangedSignal(attribute):Connect(refresh)
 	end
 	refresh()
