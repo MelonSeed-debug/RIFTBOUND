@@ -482,7 +482,7 @@ end
 local function dash(player)
 	local s = getState(player)
 	local character, humanoid, root = alive(player)
-	if not character or s.blocking or s.attacking or os.clock() < s.stunnedUntil then return end
+	if not character or s.blocking or s.attacking or stunned(player, character) then return end
 	local now = os.clock()
 	if now < s.nextDash then return end
 	s.nextDash = now + config.Dash.Cooldown
@@ -539,6 +539,9 @@ local function setup(player)
 		s.combo,s.lastHit,s.nextM1,s.nextDash = 0,0,0,0
 		s.blocking,s.attacking = false,false
 		s.nextHeavy,s.stunnedUntil,s.parryUntil,s.nextParry = 0,0,0,0
+		s.attackSerial += 1
+		s.counterUntil = 0
+		character:SetAttribute("RiftHitstunUntil",0)
 		character:SetAttribute("RiftBlocking",false)
 		Shield.Clear(character)
 		Buzz.Clear(character)
@@ -547,7 +550,10 @@ local function setup(player)
 		Sword.ClearCharacter(character)
 		PillPassive.Reset(player)
 	end)
-	if player.Character then player.Character:SetAttribute("RiftBlocking",false) end
+	if player.Character then
+		player.Character:SetAttribute("RiftHitstunUntil",0)
+		player.Character:SetAttribute("RiftBlocking",false)
+	end
 end
 Players.PlayerAdded:Connect(setup)
 for _,player in Players:GetPlayers() do setup(player) end
