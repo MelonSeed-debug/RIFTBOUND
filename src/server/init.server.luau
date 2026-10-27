@@ -363,7 +363,7 @@ local function strike(player, character, entry, damage, combo, heavy, stunTime)
 			-- A parry is earned ONLY when a server-validated hit meets guard
 			-- direction inside the 0.25s perfect-block window.
 			ds.parryUntil = 0
-			d			stagger(character, v2.ParryStun)
+			stagger(character, v2.ParryStun)
 			fx:FireAllClients("Parry", target, combo)
 			return false
 		end
@@ -735,7 +735,7 @@ task.defer(function()
 		RewardParry = function(player)
 			local s = getState(player)
 			s.parryUntil = 0
-					end,
+		end,
 		ApplyHitstun = function(character, duration)
 			stagger(character, duration)
 		end,
