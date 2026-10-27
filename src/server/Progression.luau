@@ -45,6 +45,8 @@ local function publish(player, p)
 	player:SetAttribute("LevelCap", cfg.MaxLevel)
 	player:SetAttribute("ProgressLoaded", p.loaded)
 	player:SetAttribute("ProgressSavingEnabled", p.canSave)
+	player:SetAttribute("ProgressLoadState", p.loadState or "Loading")
+	player:SetAttribute("ProgressLoadNote", p.loadNote or "")
 	player:SetAttribute("QuestActiveId", p.questActive)
 	player:SetAttribute("QuestCount", p.questCount)
 	local activeDefinition = questCfg.Quests[p.questActive]
@@ -125,7 +127,9 @@ local function load(player, p)
 	else
 		success, result = false, "DataStore could not be created"
 	end
-	if profiles[player] ~= p then return end
+	-- A slow GetAsync may return AFTER our watchdog started an unsaved
+	-- session. Never import those late values or permit an accidental save.
+	if profiles[player] ~= p or p.loadResolved then return end
 	if success then
 		local saved = typeof(result) == "table" and result or {}
 		p.level = cleanInteger(saved.level, 1, cfg.MaxLevel, 1)
@@ -193,12 +197,17 @@ local function load(player, p)
 			applyReward(p, p.pendingXP, p.pendingCoins, p.pendingKills)
 		end
 		p.canSave = true
+		p.loadState = "Saved"
+		p.loadNote = "Save data connected."
 		player:SetAttribute("EquippedSpec", p.equippedSpec)
 	else
 		p.canSave = false
+		p.loadState = "Session"
+		p.loadNote = "DataStore read failed. This session will not overwrite saved data."
 		warn("[RIFTBOUND Progression] DataStore read failed; session progress only for", player.Name, result)
 	end
 	p.pendingXP, p.pendingCoins, p.pendingKills = 0, 0, 0
+	p.loadResolved = true
 	p.loaded = true
 	publish(player, p)
 end
@@ -208,6 +217,8 @@ function Progression.Initialize(player)
 	local p = {
 		level = 1, xp = 0, coins = 0, kills = 0,
 		loaded = false, canSave = false, dirty = false,
+		loadResolved = false, loadState = "Loading",
+		loadNote = "Connecting to saved progress...",
 		pendingXP = 0, pendingCoins = 0, pendingKills = 0,
 		questActive = "", questCount = 0, questCompleted = {}, questPermits = {},
 		specUnlocks = {}, equippedSpec = registry.Default,
@@ -216,7 +227,37 @@ function Progression.Initialize(player)
 	}
 	profiles[player] = p
 	publish(player, p)
-	task.spawn(load, player, p)
+
+	-- Never leave the entire interface at "LOADING" if DataStore calls stall.
+	-- We err on the side of preserving saved data: the fallback is playable,
+	-- session-only, and CANNOT save over the player's existing profile.
+	local function startUnsaved(reason)
+		if profiles[player] ~= p or p.loadResolved then return end
+		p.loadResolved = true
+		p.canSave = false
+		p.loaded = true
+		p.loadState = "Session"
+		p.loadNote = reason
+		p.pendingXP, p.pendingCoins, p.pendingKills = 0, 0, 0
+		warn("[RIFTBOUND Progression] Unsaved session for", player.Name, reason)
+		publish(player, p)
+	end
+
+	task.spawn(function()
+		local ok, err = xpcall(function()
+			load(player, p)
+		end, debug.traceback)
+		if not ok then
+			-- Errors during data migration or attribute publishing must not
+			-- strand the quest HUD. Still NEVER allow writes after failure.
+			startUnsaved("Profile initialization failed. Session data will not be saved.")
+			warn("[RIFTBOUND Progression] Initialization error:", err)
+		end
+	end)
+
+	task.delay(18, function()
+		startUnsaved("Save service took too long. Playing unsaved; previous data is safe.")
+	end)
 end
 
 function Progression.AwardNPCDefeat(player, npcName)
