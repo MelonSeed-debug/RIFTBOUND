@@ -246,7 +246,7 @@ function Progression.Initialize(player)
 	task.spawn(function()
 		local ok, err = xpcall(function()
 			load(player, p)
-		end, debug.traceback)
+		end, function(err) return tostring(err) end)
 		if not ok then
 			-- Errors during data migration or attribute publishing must not
 			-- strand the quest HUD. Still NEVER allow writes after failure.
