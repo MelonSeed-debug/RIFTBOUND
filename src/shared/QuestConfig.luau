@@ -18,17 +18,17 @@ return {
 		},
 		ExploreCinderfall = {
 			Name="Across the Ash",Description="Travel along the east road and discover Cinderfall.",
-			RequiredLevel=10,Target="Enter:Cinderfall",Count=1,
+			RequiredLevel=1,Target="Enter:Cinderfall",Count=1,
 			XP=230,Coins=75,Repeatable=false,Category="Exploration",
 		},
 		ExploreHighlandRidge = {
 			Name="Highland Ascent",Description="Find the northern trail to Highland Ridge.",
-			RequiredLevel=20,Target="Enter:HighlandRidge",Count=1,
+			RequiredLevel=1,Target="Enter:HighlandRidge",Count=1,
 			XP=520,Coins=140,Repeatable=false,Category="Exploration",
 		},
 		ExploreShatteredVerge = {
 			Name="At the World's Edge",Description="Discover the Shattered Verge on the northeast path.",
-			RequiredLevel=35,Target="Enter:ShatteredVerge",Count=1,
+			RequiredLevel=1,Target="Enter:ShatteredVerge",Count=1,
 			XP=1100,Coins=310,Repeatable=false,Category="Exploration",
 		},
 		FirstSpark = {
