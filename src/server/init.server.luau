@@ -8,7 +8,48 @@ local rift = ReplicatedStorage:WaitForChild("Riftbound")
 local config = require(rift.Shared.CombatConfig)
 local worldCfg = require(rift.Shared.WorldConfig)
 local masteryCfg = require(rift.Shared.MasteryConfig)
-local Hitbox = require(script:WaitForChild("CombatHitbox", 8))
+-- CombatHitbox is normally Rojo-managed. If Studio has only partially
+-- synced an update, retain a basic server hitbox rather than crash combat.
+local hitboxModule = script:FindFirstChild("CombatHitbox")
+	or script:WaitForChild("CombatHitbox", 5)
+local Hitbox
+if hitboxModule and hitboxModule:IsA("ModuleScript") then
+	local ok, result = pcall(require, hitboxModule)
+	if ok and type(result) == "table"
+		and type(result.Scan) == "function"
+		and type(result.Stagger) == "function" then
+		Hitbox = result
+	else
+		warn("[RIFTBOUND Combat2] Hitbox module failed to load:", result)
+	end
+end
+if not Hitbox then
+	warn("[RIFTBOUND Combat2] Missing CombatHitbox. Sync entire src folder! Using basic server melee until updated.")
+	Hitbox = {
+		IsStunned = function() return false end,
+		Stagger = function() return false end,
+		Scan = function(character, root, range, width, height)
+			if not root then return {} end
+			local params = OverlapParams.new()
+			params.FilterType = Enum.RaycastFilterType.Exclude
+			params.FilterDescendantsInstances = {character}
+			local seen, targets = {}, {}
+			for _, part in Workspace:GetPartBoundsInBox(
+				root.CFrame * CFrame.new(0,0,-range/2),
+				Vector3.new(width,height,range),params) do
+				local model = part:FindFirstAncestorOfClass("Model")
+				local hum = model and model:FindFirstChildOfClass("Humanoid")
+				local targetRoot = model and model:FindFirstChild("HumanoidRootPart")
+				if model and not seen[model] and hum and targetRoot
+					and hum.Health > 0 and model ~= character then
+					seen[model] = true
+					table.insert(targets,{model=model,humanoid=hum,root=targetRoot})
+				end
+			end
+			return targets
+		end,
+	}
+end
 -- Sword tuning stays optional: a missing new file cannot break legacy combat.
 local swordSpec = {Passive = {}}
 local swordSpecModule = rift.Shared:FindFirstChild("GreatSwordSpec")
@@ -242,7 +283,14 @@ local fx = rift.Remotes.CombatFX
 
 -- Combat 2.0: server-owned hitstun, counter windows and attack sequences.
 local states = {}
-local v2 = config.CombatV2
+local v2 = config.CombatV2 or {
+	UnarmedHitstun=0.18, SwordHitstun=0.28,
+	UnarmedFinisherHitstun=0.34, SwordFinisherHitstun=0.46,
+	HeavyHitstun=0.46, SwordHeavyHitstun=0.60,
+	CounterWindow=1.05, CounterDamageBonus=1.25,
+	SwordCounterDamageBonus=1.18, SwordComboResetTime=1.55,
+	ParryStun=0.92,
+}
 local function getState(player)
 	if not states[player] then
 		states[player] = {
@@ -279,6 +327,7 @@ local function stagger(character, seconds)
 		s.blocking = false
 		s.combo = 0
 		s.parryUntil = 0
+		s.counterUntil = 0 -- a stunned defender forfeits an unspent punish
 		s.stunnedUntil = math.max(s.stunnedUntil, os.clock() + seconds)
 		character:SetAttribute("RiftBlocking", false)
 		-- CombatHitbox.Stagger owns the temporary 5 WalkSpeed lock and
