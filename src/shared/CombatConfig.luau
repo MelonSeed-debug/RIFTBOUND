@@ -3,6 +3,22 @@
 local CombatConfig = {
 	BaseWalkSpeed = 16,
 
+	-- Core combat only: no changes to saved mastery or ability cooldowns.
+	CombatV2 = {
+		UnarmedHitstun = 0.18,
+		SwordHitstun = 0.28,
+		UnarmedFinisherHitstun = 0.34,
+		SwordFinisherHitstun = 0.46,
+		HeavyHitstun = 0.46,
+		SwordHeavyHitstun = 0.60,
+		CounterWindow = 1.05, -- earned when a genuine perfect parry succeeds
+		CounterDamageBonus = 1.25, -- next confirmed M1/heavy, not each target
+		SwordCounterDamageBonus = 1.18,
+		SwordComboResetTime = 1.55,
+		-- A tiny recovery advantage rewards correct timing, not click spam.
+		ParryStun = 0.92,
+	},
+
 	M1 = {
 		Damages = {7, 7, 9, 12},
 		ComboResetTime = 1.20,
