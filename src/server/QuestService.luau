@@ -32,6 +32,10 @@ function QuestService.Start()
 	started = true
 	print("[RIFTBOUND Quests] Quest service ready.")
 
+	-- Open World 1.0 leaves quest acceptance on the J / M journal.
+	-- Do not spawn prewritten NPCs or obsolete trial altars; keep the
+	-- server-validated QuestRequest and QuestFX event handlers active.
+	if World.EnableQuestStations == true then
 	-- Two physical interaction points: a quest giver at spawn and a
 	-- trial altar near the Rift Sentinel. Both use server ProximityPrompts.
 	local world = game:GetService("Workspace")
@@ -101,6 +105,7 @@ function QuestService.Start()
 				fx:FireClient(player, success == true, msg)
 			end)
 	end
+	end -- World.EnableQuestStations
 	request.OnServerEvent:Connect(function(player, action, questId)
 		if typeof(action) ~= "string" or #action > 20 then return end
 		local now = os.clock()
