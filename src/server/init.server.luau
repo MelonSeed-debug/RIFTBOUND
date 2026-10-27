@@ -8,6 +8,7 @@ local rift = ReplicatedStorage:WaitForChild("Riftbound")
 local config = require(rift.Shared.CombatConfig)
 local worldCfg = require(rift.Shared.WorldConfig)
 local masteryCfg = require(rift.Shared.MasteryConfig)
+local Hitbox = require(script:WaitForChild("CombatHitbox", 8))
 -- Sword tuning stays optional: a missing new file cannot break legacy combat.
 local swordSpec = {Passive = {}}
 local swordSpecModule = rift.Shared:FindFirstChild("GreatSwordSpec")
@@ -60,7 +61,7 @@ if passiveModule and passiveModule:IsA("ModuleScript") then
 else
 	warn("[RIFTBOUND] Missing PillPassive module; base combat still active.")
 end
-local Shield = {Activate = function() return false end, Damage = function(_, hum, n) hum:TakeDamage(n) end, Clear = function() end, ResetPlayer = function() end}
+local Shield = {Activate = function() return false end, Damage = function(_, hum, n) hum:TakeDamage(n) return n end, Clear = function() end, ResetPlayer = function() end}
 local shieldModule = script:FindFirstChild("PillShield") or script:WaitForChild("PillShield", 3)
 if shieldModule then
 	local ok, loaded = pcall(require, shieldModule)
@@ -204,6 +205,8 @@ if specRequest then
 		local skill=masteryCfg.SkillActions[action]
 		if not skill then return end
 		if player:GetAttribute("EquippedSpec")~=skill.Spec then return end
+		-- Casting while hitstunned would evade stagger with teleport/guard.
+		if Hitbox.IsStunned(player.Character) then return end
 		local needed=masteryCfg.SkillRequirements[skill.Key] or 0
 		local owned=player:GetAttribute("SpecMastery_"..skill.Spec) or 0
 		if owned<needed then
@@ -237,10 +240,17 @@ end
 local request = rift.Remotes.CombatRequest
 local fx = rift.Remotes.CombatFX
 
+-- Combat 2.0: server-owned hitstun, counter windows and attack sequences.
 local states = {}
+local v2 = config.CombatV2
 local function getState(player)
 	if not states[player] then
-		states[player] = {combo=0,lastHit=0,nextM1=0,nextDash=0,blocking=false,attacking=false,nextHeavy=0,stunnedUntil=0,parryUntil=0,nextParry=0}
+		states[player] = {
+			combo=0, lastHit=0, nextM1=0, nextDash=0,
+			blocking=false, attacking=false,
+			nextHeavy=0, stunnedUntil=0, parryUntil=0, nextParry=0,
+			attackSerial=0, counterUntil=0,
+		}
 	end
 	return states[player]
 end
@@ -254,171 +264,219 @@ local function alive(player)
 	return character, humanoid, root
 end
 
+local function stunned(player, character)
+	local s = getState(player)
+	return os.clock() < s.stunnedUntil or Hitbox.IsStunned(character)
+end
+
+local function stagger(character, seconds)
+	if not Hitbox.Stagger(character, seconds) then return end
+	local player = Players:GetPlayerFromCharacter(character)
+	if player then
+		local s = getState(player)
+		s.attackSerial += 1 -- instantly cancels unresolved server attack callbacks
+		s.attacking = false
+		s.blocking = false
+		s.combo = 0
+		s.parryUntil = 0
+		s.stunnedUntil = math.max(s.stunnedUntil, os.clock() + seconds)
+		character:SetAttribute("RiftBlocking", false)
+		local hum = character:FindFirstChildOfClass("Humanoid")
+		if hum then hum.WalkSpeed = config.BaseWalkSpeed end
+		fx:FireAllClients("Block", character, false)
+	end
+	fx:FireAllClients("Stagger", character)
+end
+
+-- Only the next VALID attack consumes the parry reward. One swing can hit
+-- several targets, but the bonus is computed once, from server state.
+local function consumeCounter(s, sword)
+	local now = os.clock()
+	if now > s.counterUntil then return 1 end
+	s.counterUntil = 0
+	return sword and v2.SwordCounterDamageBonus or v2.CounterDamageBonus
+end
+
+local function guarded(target, targetRoot, attackerRoot)
+	if target:GetAttribute("RiftBlocking") ~= true then return false end
+	local towardAttacker = attackerRoot.Position - targetRoot.Position
+	local flat = Vector3.new(towardAttacker.X, 0, towardAttacker.Z)
+	if flat.Magnitude < 0.1 then return false end
+	return targetRoot.CFrame.LookVector:Dot(flat.Unit) >= config.Block.FrontDot
+end
+
+-- Uniform block -> perfect-parry -> guard-break -> damage flow. All outcomes
+-- are resolved from the target's CURRENT state at hit time, not attack start.
+local function strike(player, character, entry, damage, combo, heavy, stunTime, bonus)
+	local target = entry.model
+	local hum = entry.humanoid
+	local targetRoot = entry.root
+	if not target.Parent or hum.Health <= 0 then return false end
+	local attackerRoot = character:FindFirstChild("HumanoidRootPart")
+	if not attackerRoot then return false end
+	if guarded(target, targetRoot, attackerRoot) then
+		local defender = Players:GetPlayerFromCharacter(target)
+		local ds = defender and getState(defender) or nil
+		local parrying = ds and ds.blocking and os.clock() <= ds.parryUntil
+		if parrying then
+			-- A parry is earned ONLY when a server-validated hit meets guard
+			-- direction inside the 0.25s perfect-block window.
+			ds.parryUntil = 0
+			ds.counterUntil = os.clock() + v2.CounterWindow
+			stagger(character, v2.ParryStun)
+			fx:FireAllClients("Parry", target, combo)
+			return false
+		end
+		if heavy then
+			target:SetAttribute("RiftBlocking", false)
+			stagger(target, config.Heavy.GuardBreakStun)
+			fx:FireAllClients("GuardBreak", target, combo)
+		else
+			fx:FireAllClients("BlockedHit", target, combo)
+		end
+		return false
+	end
+
+	local dealt = Shield.Damage(target, hum, damage * bonus, player) or 0
+	if dealt <= 0 then return false end
+	PillPassive.OnHit(player, target)
+	Void.OnHit(player, target)
+	stagger(target, stunTime)
+	if not targetRoot.Anchored then
+		if heavy then
+			targetRoot.AssemblyLinearVelocity = attackerRoot.CFrame.LookVector
+				* (config.Heavy.Knockback + (player:GetAttribute("EquippedSpec") == "GreatSword" and 8 or 0))
+				+ Vector3.new(0, 7, 0)
+		elseif combo == 4 then
+			targetRoot.AssemblyLinearVelocity = attackerRoot.CFrame.LookVector
+				* config.M1.FinisherKnockback + Vector3.new(0, 12, 0)
+		end
+	end
+	fx:FireAllClients("Hit", target, combo, math.round(dealt * 10) / 10)
+	return true
+end
+
 local function block(player, active)
 	local s = getState(player)
 	local character, humanoid = alive(player)
-	if not character or (active and (s.attacking or os.clock() < s.stunnedUntil)) then return end
-	if active and not s.blocking and os.clock() >= s.nextParry then
-		s.parryUntil = os.clock() + config.Block.ParryWindow
-		s.nextParry = os.clock() + config.Block.ParryCooldown
+	if not character then return end
+	if not active then
+		-- Always permit releasing block, including during stagger.
+		s.blocking = false
+		s.parryUntil = 0
+		character:SetAttribute("RiftBlocking", false)
+		humanoid.WalkSpeed = config.BaseWalkSpeed
+		fx:FireAllClients("Block", character, false)
+		return
 	end
-	s.blocking = active
-	character:SetAttribute("RiftBlocking", active)
-	humanoid.WalkSpeed = active and config.Block.WalkSpeed or ((character:GetAttribute("RaveRushEnds") or 0) > Workspace:GetServerTimeNow() and config.BaseWalkSpeed * 1.5 or config.BaseWalkSpeed)
-	fx:FireAllClients("Block", character, active)
+	if s.blocking or s.attacking or stunned(player, character) then return end
+	local current = os.clock()
+	if current >= s.nextParry then
+		s.parryUntil = current + config.Block.ParryWindow
+		s.nextParry = current + config.Block.ParryCooldown
+	else
+		s.parryUntil = 0
+	end
+	s.blocking = true
+	character:SetAttribute("RiftBlocking", true)
+	humanoid.WalkSpeed = config.Block.WalkSpeed
+	fx:FireAllClients("Block", character, true)
 end
 
 local function m1(player)
 	local s = getState(player)
-	local character, humanoid, root = alive(player)
-	if not character or s.blocking or s.attacking or os.clock() < s.stunnedUntil then return end
+	local character = alive(player)
+	if not character or s.blocking or s.attacking or stunned(player, character) then return end
 	local now = os.clock()
 	if now < s.nextM1 then return end
-	if now - s.lastHit > config.M1.ComboResetTime then s.combo = 0 end
 	local sword = player:GetAttribute("EquippedSpec") == "GreatSword" and swordSpec.Passive or nil
+	local resetWindow = sword and v2.SwordComboResetTime or config.M1.ComboResetTime
+	if now - s.lastHit > resetWindow then s.combo = 0 end
 	s.combo = s.combo % #config.M1.Damages + 1
 	s.lastHit = now
 	local combo = s.combo
-	local slowAttack = (character:GetAttribute("Pill_MoodStabilizer") or 0) > os.clock()
-	s.nextM1 = now + (combo == 4
-		and (sword and sword.M1FinisherCooldown or config.M1.FinisherCooldown)
-		or (sword and sword.M1HitCooldown or config.M1.HitCooldown))
-		* (slowAttack and (1 / 0.97) or 1)
+	local windup = sword and sword.M1Windup or config.M1.Windup
+	local recovery = sword and sword.M1Recovery or config.M1.Recovery
+	local cooldown = combo == 4 and (sword and sword.M1FinisherCooldown or config.M1.FinisherCooldown)
+		or (sword and sword.M1HitCooldown or config.M1.HitCooldown)
+	local slowAttack = (character:GetAttribute("Pill_MoodStabilizer") or 0) > now
+	s.nextM1 = now + cooldown * (slowAttack and (1 / 0.97) or 1)
 	s.attacking = true
+	s.attackSerial += 1
+	local serial = s.attackSerial
+	local bonus = consumeCounter(s, sword)
 	fx:FireAllClients("Swing", character, combo)
+
 	if character:GetAttribute("FrenzyNausea") == true then
 		character:SetAttribute("FrenzyNausea", nil)
 		fx:FireAllClients("NauseaMiss", character)
-		task.delay(sword and sword.M1Recovery or config.M1.Recovery, function() s.attacking = false end)
-		return
-	end
-	-- Resolve hit after short windup; use SERVER character position.
-	task.delay(sword and sword.M1Windup or config.M1.Windup, function()
-		local liveChar, _, liveRoot = alive(player)
-		if liveChar ~= character or not liveRoot then return end
-		if sword and player:GetAttribute("EquippedSpec") ~= "GreatSword" then return end
-		local range = sword and sword.M1Range or config.M1.Range
-		local width = sword and sword.M1Width or config.M1.Width
-		local size = Vector3.new(width, config.M1.Height, range)
-		local box = liveRoot.CFrame * CFrame.new(0,0,-range / 2)
-		local params = OverlapParams.new()
-		params.FilterType = Enum.RaycastFilterType.Exclude
-		params.FilterDescendantsInstances = {character}
-		local touched = {}
-		for _, part in Workspace:GetPartBoundsInBox(box,size,params) do
-			local model = part:FindFirstAncestorOfClass("Model")
-			if model and not touched[model] then
-				touched[model] = true
-				local targetHum = model:FindFirstChildOfClass("Humanoid")
-				local targetRoot = model:FindFirstChild("HumanoidRootPart")
-				if targetHum and targetRoot and targetHum.Health > 0
-					and not (Players:GetPlayerFromCharacter(model) and
-						(character:GetAttribute("RiftSafeZone") == true or model:GetAttribute("RiftSafeZone") == true)) then
-					local delta = targetRoot.Position - liveRoot.Position
-					if delta.Magnitude <= range + 3 and delta.Magnitude > 0.01 and liveRoot.CFrame.LookVector:Dot(delta.Unit) > 0.10 then
-						local defended = model:GetAttribute("RiftBlocking") == true and targetRoot.CFrame.LookVector:Dot((-delta).Unit) >= config.Block.FrontDot
-						if defended then
-							local defender = Players:GetPlayerFromCharacter(model)
-							local ds = defender and getState(defender)
-							if ds and os.clock() <= ds.parryUntil then
-								s.stunnedUntil = os.clock() + config.Block.ParryStun
-								fx:FireAllClients("Parry",model,combo)
-							else
-								fx:FireAllClients("BlockedHit",model,combo)
-							end
-						else
-							Shield.Damage(model, targetHum, sword and sword.M1Damage and sword.M1Damage[combo] or config.M1.Damages[combo], player)
-							PillPassive.OnHit(player, model)
-							Void.OnHit(player, model)
-							if combo == 4 and not targetRoot.Anchored then
-								targetRoot.AssemblyLinearVelocity = liveRoot.CFrame.LookVector * config.M1.FinisherKnockback + Vector3.new(0,12,0)
-							end
-							fx:FireAllClients("Hit",model,combo,sword and sword.M1Damage and sword.M1Damage[combo] or config.M1.Damages[combo])
-						end
-					end
-				end
+	else
+		task.delay(windup, function()
+			local currentCharacter, _, root = alive(player)
+			if currentCharacter ~= character or not root or serial ~= s.attackSerial
+				or stunned(player, character)
+				or (sword and player:GetAttribute("EquippedSpec") ~= "GreatSword") then return end
+			local range = sword and sword.M1Range or config.M1.Range
+			local width = sword and sword.M1Width or config.M1.Width
+			local damage = sword and sword.M1Damage and sword.M1Damage[combo]
+				or config.M1.Damages[combo]
+			local stun = sword and v2.SwordHitstun or v2.UnarmedHitstun
+			if combo == 4 then
+				stun = sword and v2.SwordFinisherHitstun or v2.UnarmedFinisherHitstun
 			end
-		end
+			for _, target in Hitbox.Scan(character, root, range, width,
+				config.M1.Height, {FrontDot = sword and -0.12 or 0.02}) do
+				-- A successful parry cancels the attack mid-resolution.
+				if serial ~= s.attackSerial then break end
+				strike(player, character, target, damage, combo, false, stun, bonus)
+			end
+		end)
+	end
+	task.delay(recovery, function()
+		if serial == s.attackSerial then s.attacking = false end
 	end)
-	task.delay(sword and sword.M1Recovery or config.M1.Recovery, function() s.attacking = false end)
 end
 
 local function heavy(player)
 	local s = getState(player)
-	local character, _, root = alive(player)
-	if not character or s.blocking or s.attacking or os.clock() < s.stunnedUntil then return end
+	local character = alive(player)
+	if not character or s.blocking or s.attacking or stunned(player, character) then return end
 	local now = os.clock()
 	if now < s.nextHeavy then return end
-	local slowAttack = (character:GetAttribute("Pill_MoodStabilizer") or 0) > os.clock()
 	local sword = player:GetAttribute("EquippedSpec") == "GreatSword" and swordSpec.Passive or nil
-	s.nextHeavy = now + (sword and sword.HeavyCooldown or config.Heavy.Cooldown)
-		* (slowAttack and (1 / 0.97) or 1)
+	local cooldown = sword and sword.HeavyCooldown or config.Heavy.Cooldown
+	local windup = sword and sword.HeavyWindup or config.Heavy.Windup
+	local recovery = sword and sword.HeavyRecovery or config.Heavy.Recovery
+	local slowAttack = (character:GetAttribute("Pill_MoodStabilizer") or 0) > now
+	s.nextHeavy = now + cooldown * (slowAttack and (1 / 0.97) or 1)
 	s.attacking = true
-	fx:FireAllClients("HeavySwing",character)
+	s.attackSerial += 1
+	local serial = s.attackSerial
+	local bonus = consumeCounter(s, sword)
+	fx:FireAllClients("HeavySwing", character)
 	if character:GetAttribute("FrenzyNausea") == true then
 		character:SetAttribute("FrenzyNausea", nil)
 		fx:FireAllClients("NauseaMiss", character)
-		task.delay(sword and sword.HeavyRecovery or config.Heavy.Recovery, function() s.attacking = false end)
-		return
-	end
-	task.delay(sword and sword.HeavyWindup or config.Heavy.Windup,function()
-		local current, _, currentRoot = alive(player)
-		if current ~= character or not currentRoot or os.clock() < s.stunnedUntil then return end
-		if sword and player:GetAttribute("EquippedSpec") ~= "GreatSword" then return end
-		local params = OverlapParams.new()
-		params.FilterType = Enum.RaycastFilterType.Exclude
-		params.FilterDescendantsInstances = {character}
-		local seen = {}
-		local range = sword and sword.HeavyRange or config.Heavy.Range
-		local width = sword and sword.HeavyWidth or config.Heavy.Width
-		local box = currentRoot.CFrame * CFrame.new(0,0,-range/2)
-		for _, part in Workspace:GetPartBoundsInBox(box,Vector3.new(width,config.Heavy.Height,range),params) do
-			local target = part:FindFirstAncestorOfClass("Model")
-			if target and not seen[target] then
-				seen[target] = true
-				local hum = target:FindFirstChildOfClass("Humanoid")
-				local targetRoot = target:FindFirstChild("HumanoidRootPart")
-				if hum and targetRoot and hum.Health > 0
-					and not (Players:GetPlayerFromCharacter(target) and
-						(character:GetAttribute("RiftSafeZone") == true or target:GetAttribute("RiftSafeZone") == true)) then
-					local offset = targetRoot.Position-currentRoot.Position
-					if offset.Magnitude > 0.01 and offset.Magnitude <= range+2 and currentRoot.CFrame.LookVector:Dot(offset.Unit) > 0.1 then
-						local guarded = target:GetAttribute("RiftBlocking") == true and targetRoot.CFrame.LookVector:Dot(-offset.Unit) >= config.Block.FrontDot
-						local defender = Players:GetPlayerFromCharacter(target)
-						local ds = defender and getState(defender)
-						if guarded and ds and now <= ds.parryUntil then
-							s.stunnedUntil = os.clock()+config.Block.ParryStun
-							fx:FireAllClients("Parry",target)
-						else
-							if guarded then
-								if ds then
-									ds.blocking = false
-									ds.stunnedUntil = os.clock()+config.Heavy.GuardBreakStun
-									local defenderHum = target:FindFirstChildOfClass("Humanoid")
-									if defenderHum then defenderHum.WalkSpeed = 0 end
-									task.delay(config.Heavy.GuardBreakStun,function()
-										if defenderHum and defenderHum.Parent and ds and os.clock() >= ds.stunnedUntil then defenderHum.WalkSpeed=config.BaseWalkSpeed end
-									end)
-								end
-								target:SetAttribute("RiftBlocking",false)
-								if target:GetAttribute("RiftNPC") == true then
-									target:SetAttribute("RiftNPCStunnedUntil", os.clock() + config.Heavy.GuardBreakStun)
-								end
-								fx:FireAllClients("GuardBreak",target)
-							else
-								Shield.Damage(target, hum, sword and sword.HeavyDamage or config.Heavy.Damage, player)
-								PillPassive.OnHit(player, target)
-								Void.OnHit(player, target)
-								if not targetRoot.Anchored then targetRoot.AssemblyLinearVelocity=currentRoot.CFrame.LookVector*config.Heavy.Knockback end
-								fx:FireAllClients("Hit",target,5,sword and sword.HeavyDamage or config.Heavy.Damage)
-							end
-						end
-					end
-				end
+	else
+		task.delay(windup, function()
+			local liveCharacter, _, root = alive(player)
+			if liveCharacter ~= character or not root or serial ~= s.attackSerial
+				or stunned(player, character)
+				or (sword and player:GetAttribute("EquippedSpec") ~= "GreatSword") then return end
+			local range = sword and sword.HeavyRange or config.Heavy.Range
+			local width = sword and sword.HeavyWidth or config.Heavy.Width
+			local damage = sword and sword.HeavyDamage or config.Heavy.Damage
+			local stun = sword and v2.SwordHeavyHitstun or v2.HeavyHitstun
+			for _, target in Hitbox.Scan(character, root, range, width,
+				config.Heavy.Height, {FrontDot = sword and -0.16 or 0.0}) do
+				if serial ~= s.attackSerial then break end
+				strike(player, character, target, damage, 5, true, stun, bonus)
 			end
-		end
+		end)
+	end
+	task.delay(recovery, function()
+		if serial == s.attackSerial then s.attacking = false end
 	end)
-	task.delay(sword and sword.HeavyRecovery or config.Heavy.Recovery,function() s.attacking=false end)
 end
 
 local function dash(player)
