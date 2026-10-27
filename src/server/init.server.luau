@@ -76,18 +76,34 @@ else
 end
 -- Optional progression: failure cannot disable the working combat or NPC system.
 local Progression = {AwardNPCDefeat = function() return false end}
+local progressionStarted = false
 local progressionModule = script:FindFirstChild("Progression") or script:WaitForChild("Progression", 3)
 if progressionModule and progressionModule:IsA("ModuleScript") then
 	local loaded, result = pcall(require, progressionModule)
 	if loaded and type(result) == "table" then
 		Progression = result
 		local started, err = pcall(Progression.Start)
+		progressionStarted = started
 		if not started then warn("[RIFTBOUND] Progression did not start:", err) end
 	else
 		warn("[RIFTBOUND] Progression failed to load:", result)
 	end
 else
 	warn("[RIFTBOUND] Progression module missing; base combat remains active.")
+end
+-- If the whole progression module fails to load, a loading spinner must not
+-- hang forever. This is a READ-ONLY diagnostic; no fake profile and no saves.
+if not progressionStarted then
+	local function reportOffline(player)
+		if player:GetAttribute("ProgressLoadState") == nil then
+			player:SetAttribute("ProgressLoadState", "Offline")
+			player:SetAttribute("ProgressLoadNote",
+				"Progression service unavailable. Re-sync source and check Server Output.")
+			player:SetAttribute("ProgressSavingEnabled", false)
+		end
+	end
+	Players.PlayerAdded:Connect(reportOffline)
+	for _, player in Players:GetPlayers() do reportOffline(player) end
 end
 -- Combat remains playable even when optional Spec files fail to sync or load.
 local PillPassive = {Reset = function() end, OnHit = function() end}
