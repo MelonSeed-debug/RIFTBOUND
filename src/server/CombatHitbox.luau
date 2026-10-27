@@ -95,9 +95,30 @@ function Resolver.Stagger(character, seconds)
 	if not hum or hum.Health <= 0 then return false end
 	local duration = math.clamp(tonumber(seconds) or 0, 0, 3)
 	if duration <= 0 then return false end
-	local untilTime = Workspace:GetServerTimeNow() + duration
-	character:SetAttribute("RiftHitstunUntil",
-		math.max(character:GetAttribute("RiftHitstunUntil") or 0, untilTime))
+	local clock = Workspace:GetServerTimeNow()
+	local existing = character:GetAttribute("RiftHitstunUntil") or 0
+	local untilTime = clock + duration
+	local expires = math.max(existing, untilTime)
+	character:SetAttribute("RiftHitstunUntil", expires)
+	-- Briefly limit movement as well as attacks. Preserve the original speed
+	-- across COMBO hitstuns instead of accidentally remembering the 5-speed
+	-- stunned value, or the temporary guard-walk speed.
+	if existing <= clock then
+		local baseline = character:GetAttribute("RiftBlocking") == true and 16
+			or hum.WalkSpeed
+		hum:SetAttribute("RiftPreHitstunWalkSpeed", baseline)
+	end
+	if hum.WalkSpeed > 5 then hum.WalkSpeed = 5 end
+	task.delay(math.max(0.05, expires - clock + 0.03), function()
+		if not character.Parent or not hum.Parent or hum.Health <= 0 then return end
+		if (character:GetAttribute("RiftHitstunUntil") or 0)
+			> Workspace:GetServerTimeNow() then return end
+		if hum.WalkSpeed <= 5.01 then
+			local restore = hum:GetAttribute("RiftPreHitstunWalkSpeed")
+			hum.WalkSpeed = typeof(restore) == "number" and restore or 16
+		end
+		hum:SetAttribute("RiftPreHitstunWalkSpeed", nil)
+	end)
 	if character:GetAttribute("RiftNPC") == true then
 		character:SetAttribute("RiftNPCStunnedUntil",
 			math.max(character:GetAttribute("RiftNPCStunnedUntil") or 0, os.clock() + duration))
