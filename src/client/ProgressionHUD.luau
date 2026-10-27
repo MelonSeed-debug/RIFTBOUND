@@ -33,7 +33,7 @@ end
 function HUD.Init(player, gui)
 	local panel = Instance.new("Frame")
 	panel.Name = "ProgressionHUD"
-	panel.Size = UDim2.fromOffset(320, 126)
+	panel.Size = UDim2.fromOffset(320, 153)
 	panel.Position = UDim2.fromOffset(15, 17)
 	panel.BackgroundColor3 = Color3.fromRGB(21, 20, 41)
 	panel.BackgroundTransparency = 0.06
@@ -47,8 +47,18 @@ function HUD.Init(player, gui)
 	outline.Thickness = 1.4
 	outline.Parent = panel
 
-	local title = text(panel, UDim2.fromOffset(290, 27), UDim2.fromOffset(13, 9),
-		"RIFTBOUND  /  PROGRESSION", 14, Deco.PaleGold, true)
+	local title = text(panel, UDim2.fromOffset(210, 27), UDim2.fromOffset(13, 9),
+		"RIFTBOUND  /  PROGRESSION", 13, Deco.PaleGold, true)
+
+	-- Status is explicit. Session-only mode never claims progress was saved,
+	-- while a slow or failed server startup no longer looks like a frozen UI.
+	local status = text(panel, UDim2.fromOffset(88, 21), UDim2.fromOffset(220, 11),
+		"CONNECTING", 10, Deco.PaleGold, true)
+	status.Name = "ProgressSaveStatus"
+	status.TextXAlignment = Enum.TextXAlignment.Center
+	status.BackgroundTransparency = 0
+	status.BackgroundColor3 = Color3.fromRGB(68, 54, 34)
+	corner(status, 7)
 	local levelText = text(panel, UDim2.fromOffset(290, 28), UDim2.fromOffset(13, 35),
 		"LEVEL 1 / 50", 20, Deco.Paper, true)
 
@@ -77,6 +87,9 @@ function HUD.Init(player, gui)
 		"Rift Coins: 0", 12, Deco.PaleGold, true)
 	local killsText = text(panel, UDim2.fromOffset(120, 19), UDim2.fromOffset(190, 105),
 		"Defeats: 0", 12, Deco.Paper, false)
+	local loadNote = text(panel, UDim2.new(1, -26, 0, 18), UDim2.fromOffset(13, 130),
+		"CONNECTING TO YOUR PROFILE...", 11, Deco.Muted, false)
+	loadNote.Name = "ProgressSaveNote"
 
 	local rewardText = text(gui, UDim2.fromOffset(390, 42), UDim2.new(0.5, -195, 0, 160),
 		"", 21, Color3.fromRGB(255, 232, 139), true)
@@ -95,6 +108,9 @@ function HUD.Init(player, gui)
 		local kills = math.max(0, player:GetAttribute("NPCKills") or 0)
 		local loaded = player:GetAttribute("ProgressLoaded") == true
 		local saveEnabled = player:GetAttribute("ProgressSavingEnabled") == true
+		local reported = player:GetAttribute("ProgressLoadState")
+		local mode = typeof(reported) == "string" and reported
+			or (loaded and (saveEnabled and "Saved" or "Session") or "Loading")
 
 		levelText.Text = "LEVEL " .. level .. " / " .. config.MaxLevel
 		coinsText.Text = "Rift Coins: " .. coins
@@ -102,12 +118,30 @@ function HUD.Init(player, gui)
 
 		local atCap = level >= config.MaxLevel
 		progressText.Text = atCap and "MAX LEVEL REACHED" or (xp .. " / " .. required .. " XP")
-		if not loaded then
-			title.Text = "RIFTBOUND  /  LOADING PROGRESS"
-		elseif not saveEnabled then
-			title.Text = "RIFTBOUND  /  SESSION ONLY"
+		if mode == "Offline" then
+			status.Text = "OFFLINE"
+			status.BackgroundColor3 = Color3.fromRGB(111, 40, 48)
+			status.TextColor3 = Color3.fromRGB(255, 223, 219)
+			loadNote.Text = "PROGRESSION OFFLINE  •  CHECK SERVER OUTPUT"
+			loadNote.TextColor3 = Color3.fromRGB(255, 166, 157)
+		elseif not loaded or mode == "Loading" then
+			status.Text = "CONNECTING"
+			status.BackgroundColor3 = Color3.fromRGB(75, 56, 36)
+			status.TextColor3 = Deco.PaleGold
+			loadNote.Text = "CONNECTING TO SAVED PROFILE..."
+			loadNote.TextColor3 = Deco.Muted
+		elseif mode == "Session" or not saveEnabled then
+			status.Text = "UNSAVED"
+			status.BackgroundColor3 = Color3.fromRGB(117, 62, 43)
+			status.TextColor3 = Color3.fromRGB(255, 231, 212)
+			loadNote.Text = "SESSION ONLY  •  CHANGES WILL NOT SAVE"
+			loadNote.TextColor3 = Color3.fromRGB(255, 198, 155)
 		else
-			title.Text = "RIFTBOUND  /  PROGRESSION"
+			status.Text = "SAVED"
+			status.BackgroundColor3 = Color3.fromRGB(36, 91, 73)
+			status.TextColor3 = Color3.fromRGB(171, 255, 209)
+			loadNote.Text = "PROFILE CONNECTED  •  PROGRESS PERSISTS"
+			loadNote.TextColor3 = Deco.Muted
 		end
 		local ratio = atCap and 1 or (required > 0 and math.clamp(xp / required, 0, 1) or 0)
 		TweenService:Create(fill, TweenInfo.new(0.24, Enum.EasingStyle.Quad), {
@@ -115,7 +149,7 @@ function HUD.Init(player, gui)
 		}):Play()
 	end
 
-	for _, attribute in {"Level", "XP", "XPToNext", "RiftCoins", "NPCKills", "ProgressLoaded", "ProgressSavingEnabled"} do
+	for _, attribute in {"Level", "XP", "XPToNext", "RiftCoins", "NPCKills", "ProgressLoaded", "ProgressSavingEnabled", "ProgressLoadState"} do
 		player:GetAttributeChangedSignal(attribute):Connect(refresh)
 	end
 	refresh()
