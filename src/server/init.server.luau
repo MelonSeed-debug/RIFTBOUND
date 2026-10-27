@@ -104,10 +104,12 @@ local Sword = {
 }
 local swordModule = script:FindFirstChild("GreatSwordMoves")
 	or script:WaitForChild("GreatSwordMoves", 5)
+local swordLoaded = false
 if swordModule then
 	local ok, result = pcall(require, swordModule)
 	if ok and type(result) == "table" then
 		Sword = result
+		swordLoaded = true
 		print("[RIFTBOUND Sword] GreatSwordMoves loaded successfully.")
 	else
 		warn("[RIFTBOUND] Great Sword module failed; legacy Specs still work:", result)
@@ -184,8 +186,16 @@ if specRequest then
 					Void.StopPlayerBuffs(player)
 					Sword.StopPlayerBuffs(player)
 				end
-				local attached, err = pcall(Sword.Refresh, player)
-				if not attached then warn("[RIFTBOUND Sword] Equip refresh failed:", err) end
+				if not swordLoaded and player:GetAttribute("EquippedSpec") == "GreatSword" then
+					player:SetAttribute("GreatSwordEquipStatus",
+						"GreatSwordMoves not loaded. Restart Rojo and reconnect Studio.")
+				else
+					local attached, err = pcall(Sword.Refresh, player)
+					if not attached then
+						warn("[RIFTBOUND Sword] Equip refresh failed:", err)
+						player:SetAttribute("GreatSwordEquipStatus", "Server sword error: check Output.")
+					end
+				end
 			end
 			return
 		end
