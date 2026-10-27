@@ -226,6 +226,14 @@ function Progression.Initialize(player)
 		revision = 0, saving = false,
 	}
 	profiles[player] = p
+	-- Only the server may signal completed exploration objectives. The
+	-- client cannot claim a region discovery by firing a RemoteEvent.
+	player:GetAttributeChangedSignal("RiftZone"):Connect(function()
+		local region = player:GetAttribute("RiftZone")
+		if typeof(region) == "string" then
+			Progression.AdvanceObjective(player, "Enter:" .. region)
+		end
+	end)
 	publish(player, p)
 
 	-- Never leave the entire interface at "LOADING" if DataStore calls stall.
@@ -303,8 +311,8 @@ function Progression.AcceptQuest(player, questId)
 	if not definition then return false, "Unknown quest." end
 	-- Flat-field prototype: repetitive open-world enemy contracts have been
 	-- temporarily retired. Previously saved quests are retained, not wiped.
-	if worldConfig.PracticeMode and definition.Category ~= "Story" then
-		return false, "Combat-grind quests are paused while we redesign progression."
+	if worldConfig.PracticeMode and definition.Category ~= "Exploration" then
+		return false, "Legacy story and grind contracts are paused. Explore the overworld."
 	end
 	if p.questActive ~= "" then return false, "Finish or abandon your active quest first." end
 	if p.level < definition.RequiredLevel then return false, "Reach level " .. definition.RequiredLevel .. " first." end
@@ -318,6 +326,12 @@ function Progression.AcceptQuest(player, questId)
 	if not definition.Repeatable and p.questCompleted[questId] then return false, "Quest already completed." end
 	p.questActive = questId
 	p.questCount = 0
+	-- Players may accept a discovery objective while already standing in
+	-- that region. It is still authoritative: RiftZone is server-owned.
+	if definition.Category == "Exploration"
+		and definition.Target == "Enter:" .. tostring(player:GetAttribute("RiftZone")) then
+		p.questCount = 1
+	end
 	p.revision += 1
 	p.dirty = true
 	publish(player, p)
