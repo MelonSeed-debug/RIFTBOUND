@@ -276,14 +276,13 @@ local function stagger(character, seconds)
 		local s = getState(player)
 		s.attackSerial += 1 -- instantly cancels unresolved server attack callbacks
 		s.attacking = false
-		local wasBlocking = s.blocking
 		s.blocking = false
 		s.combo = 0
 		s.parryUntil = 0
 		s.stunnedUntil = math.max(s.stunnedUntil, os.clock() + seconds)
 		character:SetAttribute("RiftBlocking", false)
-		local hum = character:FindFirstChildOfClass("Humanoid")
-		if hum and wasBlocking then hum.WalkSpeed = config.BaseWalkSpeed end
+		-- CombatHitbox.Stagger owns the temporary 5 WalkSpeed lock and
+		-- restores it later, so do not cancel hitstun here.
 		fx:FireAllClients("Block", character, false)
 	end
 	fx:FireAllClients("Stagger", character)
