@@ -11,6 +11,7 @@ local CombatConfig = {
 		SwordFinisherHitstun = 0.46,
 		HeavyHitstun = 0.46,
 		SwordHeavyHitstun = 0.60,
+		InputBuffer = 0.24, -- one queued M1, only in the last 240ms of recovery
 		CounterWindow = 1.05, -- earned when a genuine perfect parry succeeds
 		CounterDamageBonus = 1.25, -- next confirmed M1/heavy, not each target
 		SwordCounterDamageBonus = 1.18,
