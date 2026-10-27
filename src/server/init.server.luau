@@ -648,6 +648,14 @@ task.defer(function()
 			local s = getState(player)
 			return s.blocking == true and os.clock() <= s.parryUntil
 		end,
+		RewardParry = function(player)
+			local s = getState(player)
+			s.parryUntil = 0
+			s.counterUntil = os.clock() + v2.CounterWindow
+		end,
+		ApplyHitstun = function(character, duration)
+			stagger(character, duration)
+		end,
 		AwardDefeat = function(player, npcName)
 			return Progression.AwardNPCDefeat(player, npcName)
 		end,
