@@ -392,7 +392,15 @@ fx.OnClientEvent:Connect(function(effect, character, combo, damage)
 		shockwave(root, Color3.fromRGB(110, 190, 255), 4)
 		return
 	end
-	if effect == "NauseaMiss" then
+	if effect == "Counter" then
+		floatingText(root, "COUNTER!", Color3.fromRGB(251, 213, 96))
+		return
+	elseif effect == "Stagger" then
+		if character == Players.LocalPlayer.Character then
+			floatingText(root, "STAGGERED!", Color3.fromRGB(252, 150, 108))
+		end
+		return
+	elseif effect == "NauseaMiss" then
 		floatingText(root, "MISSED!", Color3.fromRGB(210, 180, 255))
 	elseif effect == "Hit" and typeof(damage) == "number" then
 		floatingText(root, "-" .. tostring(damage), Color3.fromRGB(255, 115, 115))
