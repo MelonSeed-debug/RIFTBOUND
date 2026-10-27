@@ -47,8 +47,8 @@ function HUD.Init(player, gui)
 	outline.Thickness = 1.4
 	outline.Parent = panel
 
-	local title = text(panel, UDim2.fromOffset(210, 27), UDim2.fromOffset(13, 9),
-		"RIFTBOUND  /  PROGRESSION", 13, Deco.PaleGold, true)
+	local title = text(panel, UDim2.fromOffset(202, 27), UDim2.fromOffset(13, 9),
+		"RIFTBOUND  /  PROGRESS", 13, Deco.PaleGold, true)
 
 	-- Status is explicit. Session-only mode never claims progress was saved,
 	-- while a slow or failed server startup no longer looks like a frozen UI.
