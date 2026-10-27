@@ -287,7 +287,8 @@ function Motion.Play(character, effect, value)
 			move = "Dash"
 		end
 	elseif effect == "Parry" then move = sword and "SwordParry" or "Parry"
-	elseif effect == "Hit" then move = sword and "SwordParried" or "Hit"
+	elseif effect == "Hit" or effect == "Stagger" then
+		move = sword and "SwordParried" or "Hit"
 	elseif effect == "GuardBreak" then move = sword and "SwordParried" or "GuardBreak"
 	elseif effect == "SwordAbility" and sword then
 		local mapping = {Z="SwordBlock",X="SwordDashAttack",
