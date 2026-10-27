@@ -162,17 +162,6 @@ gui.Name = "RIFTBOUND Controls"
 gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 gui.ResetOnSpawn = false
 gui.Parent = Players.LocalPlayer:WaitForChild("PlayerGui")
-local label = Instance.new("TextLabel")
-label.Size = UDim2.fromOffset(450,45)
-label.Position = UDim2.new(0,15,1,-60)
-label.BackgroundTransparency = 0.4
-label.BackgroundColor3 = Color3.fromRGB(12,12,22)
-label.TextColor3 = Color3.fromRGB(255,255,255)
-label.Font = Enum.Font.GothamBold
-label.TextSize = 13
-label.Text = "RIFTBOUND  |  M1  R Heavy  F Block  Q Dash  Z X C V G Skills"
-label.Name = "ControlsHint"
-label.Parent = gui
 
 -- Optional progression HUD. If it fails to sync, combat controls still work.
 local hudModule = script:FindFirstChild("ProgressionHUD") or script:WaitForChild("ProgressionHUD", 3)
@@ -392,10 +381,7 @@ fx.OnClientEvent:Connect(function(effect, character, combo, damage)
 		shockwave(root, Color3.fromRGB(110, 190, 255), 4)
 		return
 	end
-	if effect == "Counter" then
-		floatingText(root, "COUNTER!", Color3.fromRGB(251, 213, 96))
-		return
-	elseif effect == "Stagger" then
+	if effect == "Stagger" then
 		if character == Players.LocalPlayer.Character then
 			floatingText(root, "STAGGERED!", Color3.fromRGB(252, 150, 108))
 		end
