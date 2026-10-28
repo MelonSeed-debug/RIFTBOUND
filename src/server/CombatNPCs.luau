@@ -505,6 +505,14 @@ function NPCs.Start(hooks)
 		folder.Name = "RIFTBOUND Enemies"
 		folder.Parent = Workspace
 	end
+	-- Baked v3 test NPCs may still live in the generated enemy folder.
+	-- Remove only tagged RIFTBOUND NPC rigs to avoid duplication while
+	-- preserving any user-built models that are not our generated enemies.
+	for _, child in folder:GetChildren() do
+		if child:IsA("Model") and child:GetAttribute("RiftNPC") == true then
+			child:Destroy()
+		end
+	end
 	local spawn = Workspace:FindFirstChildWhichIsA("SpawnLocation", true)
 	local generated = Workspace:FindFirstChild(world.WorldName)
 	local center = generated and Vector3.new(
