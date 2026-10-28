@@ -1,11 +1,13 @@
 --!strict
--- RIFTBOUND prototype enemies: R15 Street Brawler + Street Guard.
--- Spawned for Studio tests; standalone module started safely from init.server.luau.
+-- RIFTBOUND Open World / Enemy AI 2.0.
+-- Curated R15 PvE enemies with guarded attacks and obstacle-aware pursuit.
+-- Started from init.server.luau; custom dungeon spawns remain supported.
 -- No client-driven NPC damage, positions or cooldowns.
 local Players = game:GetService("Players")
 local Workspace = game:GetService("Workspace")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
+local Navigation = require(script.Parent.NPCNavigation)
 
 local combat = require(ReplicatedStorage.Riftbound.Shared.CombatConfig)
 local world = require(ReplicatedStorage.Riftbound.Shared.WorldConfig)
@@ -165,6 +167,23 @@ local function healthBar(model, humanoid, color, displayName)
 	end)
 end
 
+-- The zone tracker updates every ~0.45s. Re-check Haven locally before
+-- selecting a target AND before committing damage at the end of a windup.
+local function inSafeZone(character, targetRoot)
+	if character:GetAttribute("RiftSafeZone") == true then return true end
+	if world.GetZoneAt then
+		local generated = Workspace:FindFirstChild(world.WorldName)
+		if generated then
+			local offset = Vector3.new(
+				targetRoot.Position.X - (generated:GetAttribute("SpawnX") or 0), 0,
+				targetRoot.Position.Z - (generated:GetAttribute("SpawnZ") or 0))
+			local _, safe = world.GetZoneAt(offset)
+			return safe == true
+		end
+	end
+	return false
+end
+
 local function nearestPlayer(root, home)
 	local bestPlayer, bestChar, bestHumanoid, bestRoot, bestDistance
 	for _, player in Players:GetPlayers() do
@@ -172,10 +191,12 @@ local function nearestPlayer(root, home)
 		local humanoid = character and character:FindFirstChildOfClass("Humanoid")
 		local targetRoot = character and character:FindFirstChild("HumanoidRootPart")
 		if humanoid and targetRoot and humanoid.Health > 0
-			and character:GetAttribute("RiftSafeZone") ~= true then
+			and not inSafeZone(character, targetRoot) then
 			local distance = (targetRoot.Position - root.Position).Magnitude
 			local homeDistance = (targetRoot.Position - home).Magnitude
 			if distance <= cfg.DetectRange and homeDistance <= cfg.LeashRange
+				and math.abs(targetRoot.Position.Y - root.Position.Y)
+					<= (cfg.VerticalDetectRange or 20)
 				and (not bestDistance or distance < bestDistance) then
 				bestDistance = distance
 				bestPlayer, bestChar, bestHumanoid, bestRoot = player, character, humanoid, targetRoot
@@ -219,6 +240,8 @@ local function attemptAttack(model, humanoid, root, player, targetCharacter, tar
 	task.delay(windup, function()
 		if not model.Parent or humanoid.Health <= 0 or (model:GetAttribute("RiftNPCStunnedUntil") or 0) > os.clock() then return end
 		if player.Character ~= targetCharacter or not targetRoot.Parent or targetHumanoid.Health <= 0 then return end
+		if inSafeZone(targetCharacter, targetRoot) then return end
+		if (model:GetAttribute("RiftHitstunUntil") or 0) > Workspace:GetServerTimeNow() then return end
 		local difference = targetRoot.Position - root.Position
 		if difference.Magnitude > reach + 0.75 or difference.Magnitude < 0.1 then return end
 		-- Walls and solid obstacles interrupt attacks; the server decides hit validity.
@@ -350,6 +373,7 @@ local function spawnOne(folder, center, definition, hooks)
 	model.Name = definition.Name
 	model:SetAttribute("RiftNPC", true)
 	model:SetAttribute("RiftBlocking", false)
+	model:SetAttribute("RiftNPCEngaged", false)
 	model:SetAttribute("RiftNPCStunnedUntil", 0)
 	humanoid.MaxHealth = definition.Health
 	humanoid.Health = definition.Health
@@ -380,6 +404,7 @@ local function spawnOne(folder, center, definition, hooks)
 	humanoid.Died:Connect(function()
 		if respawnQueued then return end
 		respawnQueued = true
+		Navigation.Clear(model)
 		model:SetAttribute("RiftBlocking", false)
 		-- NPC defeats reward only the last server-validated player who damaged
 		-- this particular enemy, within 12 seconds of its death.
