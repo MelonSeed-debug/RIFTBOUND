@@ -62,6 +62,12 @@ EnableDungeon = false
 
 Do not switch story/dialogue/dungeon flags back on until those systems are intentionally located and integrated into this world. The existing legacy dungeon entrance and its coordinates belong to the former testing map.
 
+## Progress update: Enemy AI 2.0 foundation
+
+The first **Enemy AI 2.0** pass has been implemented and committed. Existing enemies now use throttled server-side pathfinding around physical obstacles, check Haven safety immediately before a strike, return home when disengaged, and expose low-frequency AI state attributes for Studio debugging. Guardian blocking and Skirmisher strafing remain distinct. Legacy v3 NPC/quest folders are archived when their services are disabled.
+
+Read the [Enemy AI 2.0 implementation and test guide](ENEMY_AI_2_0.md) and run [the read-only Enemy AI verification script](tools/VERIFY_ENEMY_AI_2.lua) in Studio. **This milestone passed static checks only; runtime movement, performance, and combat must still be verified in Roblox Studio** before starting the first boss.
+
 ## Content roadmap after this foundation
 
 1. **World Playtest and Navigation** — validate Roblox Studio physics, existing spawn/ground height, safe Haven radius, cross-region travel, performance, waypoint navigation and collision-free encounter areas. Replace crude road junctions and props with authored terrain/meshes.
