@@ -389,7 +389,13 @@ local function runAI(model, humanoid, root, home, definition, hooks)
 			if lastMode == "Return" or lastMode == "Idle" then
 				if model:GetAttribute("RiftNPCEngaged") then
 					model:SetAttribute("RiftNPCEngaged", false)
+	model:SetAttribute("RiftNPCState", "Spawning")
 				end
+			end
+			-- Replicate state changes only when they transition. This makes
+			-- Studio debugging possible without per-frame RemoteEvents.
+			if model:GetAttribute("RiftNPCState") ~= lastMode then
+				model:SetAttribute("RiftNPCState", lastMode)
 			end
 			task.wait(cfg.ThinkInterval)
 		end
