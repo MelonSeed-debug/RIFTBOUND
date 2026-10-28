@@ -293,19 +293,50 @@ local function runAI(model, humanoid, root, home, definition, hooks)
 		local nextDecision = 0
 		local guardUntil = 0
 		local nextSidestep = 0
+		local strafeTarget = nil
+		local strafeUntil = 0
 		local archetype = definition.Archetype or "Guardian"
 		local reach = model:GetAttribute("RiftNPCAttackRange") or cfg.AttackRange
+		local lastMode = ""
 		while model.Parent and humanoid.Health > 0 do
 			local current = os.clock()
 			local stunned = (model:GetAttribute("RiftNPCStunnedUntil") or 0) > current
+				or (model:GetAttribute("RiftHitstunUntil") or 0) > Workspace:GetServerTimeNow()
 			local confused = (model:GetAttribute("FrenzyConfusionEnds") or 0) > Workspace:GetServerTimeNow()
 			local player, targetCharacter, targetHumanoid, targetRoot, distance = nearestPlayer(root, home)
+			local fromHome = (root.Position - home).Magnitude
+			local outsideLeash = fromHome >= cfg.LeashRange + 6
+
 			if stunned or confused then
+				if lastMode ~= "Stunned" then Navigation.Stop(model, humanoid, root) end
+				lastMode = "Stunned"
 				setGuard(model, humanoid, false)
-				humanoid:MoveTo(root.Position)
-			elseif player and distance then
-				if model:GetAttribute("RiftBlocking") ~= true then guardUntil = 0 end
-				if current >= nextDecision and distance <= 9 and definition.GuardChance > 0 then
+				strafeTarget = nil
+			elseif outsideLeash or not player or not distance then
+				lastMode = "Return"
+				strafeTarget = nil
+				guardUntil = 0
+				setGuard(model, humanoid, false)
+				if fromHome > 3.5 then
+					Navigation.GoTo(model, humanoid, root, home, {
+						Mode = "Return",
+						ArriveDistance = 3.5,
+					})
+				else
+					Navigation.Stop(model, humanoid, root)
+					lastMode = "Idle"
+				end
+			else
+				if lastMode ~= "Chase" and lastMode ~= "Fight" then
+					model:SetAttribute("RiftNPCEngaged", true)
+				end
+				-- Guardians favor timed blocking; faster Skirmishers try to
+				-- reposition between telegraphed attacks.
+				if distance > 12 then
+					setGuard(model, humanoid, false)
+					guardUntil = 0
+				elseif current >= nextDecision and distance <= 9
+					and (definition.GuardChance or 0) > 0 then
 					nextDecision = current + cfg.DecisionInterval
 					if random:NextNumber() < definition.GuardChance then
 						guardUntil = current + cfg.GuardDuration
@@ -317,21 +348,32 @@ local function runAI(model, humanoid, root, home, definition, hooks)
 					guardUntil = 0
 				end
 				if distance > reach - 1 then
-					humanoid:MoveTo(targetRoot.Position)
+					lastMode = "Chase"
+					strafeTarget = nil
+					Navigation.GoTo(model, humanoid, root, targetRoot.Position, {
+						Mode = "Pursue",
+						TargetCharacter = targetCharacter,
+						ArriveDistance = math.max(2.5, reach - 1.5),
+					})
 				else
-					-- Skirmishers circle and sidestep between attacks while
-					-- guardians hold their ground and prepare to block. Both
-					-- remain inside the leash around their spawn location.
+					lastMode = "Fight"
 					if archetype == "Skirmisher" and current >= nextSidestep
 						and distance > 2.4 and distance < 10 then
-						nextSidestep = current + random:NextNumber(1.3, 2.4)
+						nextSidestep = current + random:NextNumber(1.5, 2.8)
 						local side = random:NextNumber() > 0.5 and 1 or -1
-						local goal = root.Position + targetRoot.CFrame.RightVector * (6 * side)
-						if (goal - home).Magnitude < cfg.LeashRange - 10 then
-							humanoid:MoveTo(goal)
+						local goal = root.Position + root.CFrame.RightVector * (6 * side)
+						if (goal - home).Magnitude < cfg.LeashRange - 11 then
+							strafeTarget = goal
+							strafeUntil = current + 0.75
 						end
-					elseif archetype ~= "Skirmisher" then
-						humanoid:MoveTo(root.Position)
+					end
+					if strafeTarget and current < strafeUntil then
+						Navigation.GoTo(model, humanoid, root, strafeTarget, {
+							Mode = "Strafe", ArriveDistance = 1.8,
+						})
+					else
+						strafeTarget = nil
+						Navigation.Stop(model, humanoid, root)
 					end
 					local flat = Vector3.new(targetRoot.Position.X, root.Position.Y, targetRoot.Position.Z)
 					if (flat - root.Position).Magnitude > 0.05 then
@@ -339,20 +381,19 @@ local function runAI(model, humanoid, root, home, definition, hooks)
 					end
 					if current >= nextAttack and model:GetAttribute("RiftBlocking") ~= true then
 						nextAttack = current + (definition.AttackCooldown or cfg.AttackCooldown)
-						attemptAttack(model, humanoid, root, player, targetCharacter, targetHumanoid, targetRoot, hooks)
+						attemptAttack(model, humanoid, root, player,
+							targetCharacter, targetHumanoid, targetRoot, hooks)
 					end
 				end
-			else
-				setGuard(model, humanoid, false)
-				guardUntil = 0
-				if (root.Position - home).Magnitude > 3 then
-					humanoid:MoveTo(home)
-				else
-					humanoid:MoveTo(root.Position)
+			end
+			if lastMode == "Return" or lastMode == "Idle" then
+				if model:GetAttribute("RiftNPCEngaged") then
+					model:SetAttribute("RiftNPCEngaged", false)
 				end
 			end
 			task.wait(cfg.ThinkInterval)
 		end
+		Navigation.Clear(model)
 	end)
 end
 
