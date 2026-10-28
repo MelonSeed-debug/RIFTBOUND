@@ -6,6 +6,7 @@ local Workspace = game:GetService("Workspace")
 local Players = game:GetService("Players")
 local Lighting = game:GetService("Lighting")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local ServerStorage = game:GetService("ServerStorage")
 local World = require(ReplicatedStorage.Riftbound.Shared.WorldConfig)
 
 local Builder = {}
@@ -280,6 +281,35 @@ local function hideDefaultBaseplate()
 	end
 end
 
+-- Version 3's quest kiosks and prewritten dialogue actors were created
+-- outside the versioned map folder. They can survive a baked-place upgrade.
+-- Move them to ServerStorage instead of deleting users' legacy content.
+local function archivePausedLegacyObjects()
+	local names = {}
+	if World.EnableStoryActors == false then
+		table.insert(names, "RIFTBOUND Story Characters")
+	end
+	if World.EnableQuestStations == false then
+		table.insert(names, "RIFTBOUND Quest Hub")
+	end
+	for _, name in names do
+		local old = Workspace:FindFirstChild(name)
+		if old and old:IsA("Folder") then
+			local archive = ServerStorage:FindFirstChild("RIFTBOUND Archived World Objects")
+			if not archive then
+				archive = Instance.new("Folder")
+				archive.Name = "RIFTBOUND Archived World Objects"
+				archive.Parent = ServerStorage
+			end
+			-- Keep an existing archive instead of silently overwriting it.
+			-- New legacy folders receive unique Roblox names in storage.
+			old.Name = name .. " (paused from world v3)"
+			old.Parent = archive
+			warn("[RIFTBOUND World] Archived legacy world NPC/station folder:", name)
+		end
+	end
+end
+
 local function ensureSpawn(parent)
 	local spawn = spawnPart()
 	if not spawn then
@@ -298,6 +328,7 @@ end
 local function buildWorld()
 	local previous = Workspace:FindFirstChild(World.WorldName)
 	resolveOrigin(previous)
+	archivePausedLegacyObjects()
 	if previous and (previous:GetAttribute("Version") or 0) >= World.Version
 		and previous:GetAttribute("WorldStyle") == "Contiguous Open World" then
 		rootFolder = previous
