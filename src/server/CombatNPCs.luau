@@ -244,10 +244,16 @@ local function attemptAttack(model, humanoid, root, player, targetCharacter, tar
 		if (model:GetAttribute("RiftHitstunUntil") or 0) > Workspace:GetServerTimeNow() then return end
 		local difference = targetRoot.Position - root.Position
 		if difference.Magnitude > reach + 0.75 or difference.Magnitude < 0.1 then return end
+		-- Windups cannot deal damage after losing the pursuit leash. If a
+		-- player retreats into another region, enemies disengage cleanly.
+		local origin = model:GetAttribute("RiftNPCHome")
+		if typeof(origin) == "Vector3"
+			and (targetRoot.Position - origin).Magnitude > cfg.LeashRange then return end
 		-- Walls and solid obstacles interrupt attacks; the server decides hit validity.
 		local rayParams = RaycastParams.new()
 		rayParams.FilterType = Enum.RaycastFilterType.Exclude
 		rayParams.FilterDescendantsInstances = {model}
+		rayParams.RespectCanCollide = true -- decorative particles/zone signs are not walls
 		local obstacle = Workspace:Raycast(root.Position, difference, rayParams)
 		if obstacle and not obstacle.Instance:IsDescendantOf(targetCharacter) then return end
 
@@ -389,7 +395,6 @@ local function runAI(model, humanoid, root, home, definition, hooks)
 			if lastMode == "Return" or lastMode == "Idle" then
 				if model:GetAttribute("RiftNPCEngaged") then
 					model:SetAttribute("RiftNPCEngaged", false)
-	model:SetAttribute("RiftNPCState", "Spawning")
 				end
 			end
 			-- Replicate state changes only when they transition. This makes
@@ -421,6 +426,7 @@ local function spawnOne(folder, center, definition, hooks)
 	model:SetAttribute("RiftNPC", true)
 	model:SetAttribute("RiftBlocking", false)
 	model:SetAttribute("RiftNPCEngaged", false)
+	model:SetAttribute("RiftNPCState", "Spawning")
 	model:SetAttribute("RiftNPCStunnedUntil", 0)
 	humanoid.MaxHealth = definition.Health
 	humanoid.Health = definition.Health
@@ -434,6 +440,7 @@ local function spawnOne(folder, center, definition, hooks)
 	model:SetAttribute("RiftNPCWalkSpeed", definition.WalkSpeed or cfg.WalkSpeed)
 	model:SetAttribute("RiftNPCZone", definition.Id)
 	model:SetAttribute("RiftNPCRecommendedLevel", definition.RecommendedLevel)
+	model:SetAttribute("RiftNPCHome", spawnPosition)
 	humanoid.DisplayDistanceType = Enum.HumanoidDisplayDistanceType.None
 	humanoid.AutoRotate = true
 	for _, child in model:GetDescendants() do
