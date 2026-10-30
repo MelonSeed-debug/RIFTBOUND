@@ -53,6 +53,10 @@ local function canSeeGoal(character, root, destination, targetCharacter)
 		params.FilterDescendantsInstances = {character}
 	end
 	params.IgnoreWater = true
+	-- Raycast against collidable surfaces only. Decorative crystals,
+	-- labels and VFX can sit ahead of a real wall and must not incorrectly
+	-- convince the AI that the route is unobstructed.
+	params.RespectCanCollide = true
 	local from = root.Position + Vector3.new(0, 1.2, 0)
 	-- Keep line-of-sight close to waist height. Avoid mistaking the floor
 	-- for a wall when the agent and its goal stand on different road pads.
@@ -60,7 +64,7 @@ local function canSeeGoal(character, root, destination, targetCharacter)
 	local ray = to - from
 	if ray.Magnitude < 0.01 then return true end
 	local hit = Workspace:Raycast(from, ray, params)
-	return hit == nil or hit.Instance.CanCollide == false
+	return hit == nil
 end
 
 -- Cancels any stale route without waiting for an in-flight ComputeAsync.
