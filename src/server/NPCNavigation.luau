@@ -189,10 +189,11 @@ function Navigation.GoTo(character, humanoid, root, destination, options)
 		state.route = nil
 	end
 
-	-- Best-effort fallback while the route computes or when Roblox rejects
-	-- a particular route. Agent leash is always enforced by CombatNPCs.
-	humanoid:MoveTo(destination)
-	return "Fallback"
+	-- If a wall forced pathfinding, walking straight through it while
+	-- ComputeAsync runs causes jitter and NPCs repeatedly pushing into props.
+	-- Wait for a safe path; retry after the existing throttled failure window.
+	humanoid:MoveTo(root.Position)
+	return state.pending and "AwaitingPath" or "Blocked"
 end
 
 return Navigation
